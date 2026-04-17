@@ -185,7 +185,7 @@ function updateWidget(ctx: any, rootFiles: FileEntry[], subdirFiles: FileEntry[]
 		}
 
 		return { render: () => lines, invalidate: () => {} };
-	}, { placement: "belowEditor" });
+	});
 }
 
 // ── Main extension ───────────────────────────────────────────
