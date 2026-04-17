@@ -344,11 +344,26 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 			}
 
 			for (const dir of subdirs) {
+				// ALL_CAPS.md files in subdirectory
 				for (const p of findCapsFiles(dir)) {
 					const file = readFileContent(p, cwd);
 					if (file && !seenPaths.has(file.relativePath)) {
 						seenPaths.add(file.relativePath);
 						subdirFiles.push({ ...file, enabled: true, isRoot: false });
+					}
+				}
+				// ALL_CAPS/ folders inside subdirectory
+				for (const { dirName, files } of findCapsDirs(dir)) {
+					const dirKey = `${path.relative(cwd, dir).replace(/\\/g, "/")}/${dirName}/`;
+					if (seenPaths.has(dirKey)) continue;
+					seenPaths.add(dirKey);
+					const contents: string[] = [];
+					for (const fp of files) {
+						const file = readFileContent(fp, cwd);
+						if (file) contents.push(`### ${file.relativePath}\n\n${file.content}`);
+					}
+					if (contents.length > 0) {
+						subdirFiles.push({ relativePath: dirKey, content: contents.join("\n\n"), enabled: true, isRoot: false });
 					}
 				}
 			}
