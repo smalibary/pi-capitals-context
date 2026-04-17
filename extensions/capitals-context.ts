@@ -69,8 +69,14 @@ function extractSubdirs(text: string, cwd: string): Set<string> {
 
 function updateWidget(ctx: any, files: { relativePath: string; content: string }[]) {
 	if (!ctx.hasUI || files.length === 0) return;
-	const lines = files.map((f) => `  ${f.relativePath}`);
-	ctx.ui.setWidget("caps-context", lines);
+	ctx.ui.setWidget("caps-context", (_tui: any, theme: any) => {
+		const header = theme.fg("accent", "[CAPS Context]");
+		const lines = files.map((f) => theme.fg("muted", `  ${f.relativePath}`));
+		return {
+			render: () => [header, ...lines],
+			invalidate: () => {},
+		};
+	});
 }
 
 export default function capitalsContextExtension(pi: ExtensionAPI) {
