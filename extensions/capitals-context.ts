@@ -185,23 +185,28 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 	});
 
 	function refreshWidget(ctx: any) {
-		if (!ctx.hasUI || rootFiles.length === 0) return;
+		if (!ctx.hasUI) return;
+		if (rootFiles.length === 0 && subdirFiles.length === 0) {
+			ctx.ui.setWidget("caps-context", undefined);
+			return;
+		}
 		ctx.ui.setWidget("caps-context", (_tui: any, theme: Theme) => {
-			const lines: string[] = [];
-			lines.push(theme.fg("accent", "[CAPS Context]") + theme.fg("dim", "  /caps to toggle"));
-			for (const f of rootFiles) {
-				if (f.enabled) {
-					lines.push(theme.fg("muted", `  ${f.relativePath}`));
-				}
-			}
-			for (const f of subdirFiles) {
-				lines.push(theme.fg("muted", `  ${f.relativePath}`));
-			}
-			const off = rootFiles.filter(f => !f.enabled).length;
-			if (off > 0) {
-				lines.push(theme.fg("dim", `  ${off} file${off > 1 ? "s" : ""} not in context`));
-			}
-			return { render: () => lines, invalidate: () => {} };
+			return {
+				render: () => {
+					const lines: string[] = [];
+					lines.push(theme.fg("accent", "[CAPS Context]") + theme.fg("dim", "  /caps to toggle"));
+					for (const f of rootFiles) {
+						if (f.enabled) lines.push(theme.fg("muted", `  ${f.relativePath}`));
+					}
+					for (const f of subdirFiles) {
+						lines.push(theme.fg("muted", `  ${f.relativePath}`));
+					}
+					const off = rootFiles.filter(f => !f.enabled).length;
+					if (off > 0) lines.push(theme.fg("dim", `  ${off} file${off > 1 ? "s" : ""} not in context`));
+					return lines;
+				},
+				invalidate: () => {},
+			};
 		});
 	}
 
