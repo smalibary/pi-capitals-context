@@ -74,6 +74,22 @@ my-project/
 - Valid: `STATUS.md`, `DESIGN.md`, `MY_RULES.md`, `STYLE_GUIDE.md`
 - Valid folders: `RULES/`, `MEMORY/`, `API/`, `CONTEXT/`
 
+## Token counts
+
+Each file and folder shows an estimated token count so you can decide what's worth including. The total is displayed at the bottom.
+
+```
+[CAPS Context]
+  STATUS.md · 257 tokens
+  DESIGN.md · 640 tokens
+  RULES/ · 129 tokens
+  API/ · 345 tokens
+  total: 1.4k tokens
+  ctrl+shift+c to toggle
+```
+
+Helps you stay within context limits by seeing exactly what each item costs.
+
 ## Toggle files and folders
 
 At startup, press `ctrl+shift+c` to open the toggler overlay. Use ↑↓ to navigate, space to toggle, enter/esc to close. Folders toggle as a whole — all files inside are on or off together. State persists in `.pi/caps-context-state.json`.
