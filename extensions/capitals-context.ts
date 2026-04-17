@@ -117,17 +117,38 @@ function saveState(cwd: string, files: FileEntry[]) {
 
 // ── Build display text ───────────────────────────────────────
 
+// ── Token estimate (~4 chars = 1 token) ─────────────────────
+
+function estimateTokens(text: string): number {
+	return Math.ceil(text.length / 4);
+}
+
+function formatTokens(n: number): string {
+	if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+	return `${n}`;
+}
+
 function buildDisplayText(rootFiles: FileEntry[], subdirFiles: FileEntry[], theme: Theme): string {
 	let text = theme.fg("accent", "[CAPS Context]");
 	const enabled = rootFiles.filter(f => f.enabled);
 	const disabled = rootFiles.filter(f => !f.enabled);
+	let totalTokens = 0;
 
 	for (const f of enabled) {
-		text += "\n" + theme.fg("muted", `  ${f.relativePath}`);
+		const tokens = estimateTokens(f.content);
+		totalTokens += tokens;
+		text += "\n" + theme.fg("muted", `  ${f.relativePath}`) + theme.fg("dim", ` · ${formatTokens(tokens)} tokens`);
 	}
 	for (const f of subdirFiles) {
-		text += "\n" + theme.fg("muted", `  ${f.relativePath}`);
+		const tokens = estimateTokens(f.content);
+		totalTokens += tokens;
+		text += "\n" + theme.fg("muted", `  ${f.relativePath}`) + theme.fg("dim", ` · ${formatTokens(tokens)} tokens`);
 	}
+
+	if (enabled.length > 0 || subdirFiles.length > 0) {
+		text += "\n" + theme.fg("dim", `  total: ${formatTokens(totalTokens)} tokens`);
+	}
+
 	if (disabled.length > 0) {
 		text += "\n" + theme.fg("dim", `  ${disabled.length} item${disabled.length > 1 ? "s" : ""} not in context · ctrl+shift+c to toggle`);
 	} else if (rootFiles.length > 0) {
@@ -191,10 +212,14 @@ class CapsSelector {
 			const f = this.items[i];
 			const p = this.cursor === i + 1 ? "> " : "  ";
 			const c = f.enabled ? "☑" : "☐";
+			const tokens = formatTokens(estimateTokens(f.content));
 			const label = f.relativePath;
-			const line = `${p}${c} ${label}`;
+			const line = `${p}${c} ${label} · ${tokens} tokens`;
 			lines.push(truncateToWidth(f.enabled ? line : t.fg("dim", line), width));
 		}
+
+		const enabledTokens = this.items.filter(f => f.enabled).reduce((sum, f) => sum + estimateTokens(f.content), 0);
+		lines.push(t.fg("dim", `  total: ${formatTokens(enabledTokens)} tokens`));
 
 		const off = this.items.filter(f => !f.enabled).length;
 		if (off > 0) {
