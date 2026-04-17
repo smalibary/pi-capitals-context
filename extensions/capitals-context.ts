@@ -12,7 +12,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { matchesKey, Key, truncateToWidth, type Theme } from "@mariozechner/pi-tui";
+import { matchesKey, Key, truncateToWidth, type Theme, Text } from "@mariozechner/pi-tui";
 
 const CAPS_FILE_RE = /^[A-Z][A-Z0-9_]*\.md$/;
 const SKIP_FILES = new Set(["AGENTS.md", "CLAUDE.md"]);
@@ -48,7 +48,6 @@ function extractSubdirs(text: string, cwd: string): Set<string> {
 	let realDirs: string[] = [];
 	try { realDirs = fs.readdirSync(cwd, { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name); }
 	catch { return dirs; }
-
 	const re = /(?:\.?[/\\])?([A-Za-z0-9_-]+)[/\\][\w./\\-]+/g;
 	let m;
 	while ((m = re.exec(text)) !== null) {
@@ -74,6 +73,30 @@ function saveState(cwd: string, files: FileEntry[]) {
 	const state: Record<string, boolean> = {};
 	for (const f of files) state[f.relativePath] = f.enabled;
 	fs.writeFileSync(path.join(dir, STATE_FILE), JSON.stringify(state, null, "\t"));
+}
+
+// ── Build display text for message ───────────────────────────
+
+function buildDisplayText(rootFiles: FileEntry[], subdirFiles: FileEntry[], theme: Theme): string {
+	let text = theme.fg("accent", "[CAPS Context]");
+	if (rootFiles.length > 0) text += theme.fg("dim", "  /caps to toggle");
+	text += "\n";
+
+	for (const f of rootFiles) {
+		if (f.enabled) {
+			text += theme.fg("muted", `  ${f.relativePath}`) + "\n";
+		}
+	}
+	for (const f of subdirFiles) {
+		text += theme.fg("muted", `  ${f.relativePath}`) + "\n";
+	}
+
+	const off = rootFiles.filter(f => !f.enabled).length;
+	if (off > 0) {
+		text += theme.fg("dim", `  ${off} file${off > 1 ? "s" : ""} not in context`) + "\n";
+	}
+
+	return text;
 }
 
 // ── Overlay selector (root files only) ───────────────────────
@@ -159,6 +182,11 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 	let subdirFiles: FileEntry[] = [];
 	let cwd = "";
 
+	// Register custom message renderer
+	pi.registerMessageRenderer("caps-context", (message, _options, theme) => {
+		return new Text(buildDisplayText(rootFiles, subdirFiles, theme), 0, 0);
+	});
+
 	pi.on("session_start", async (_event, ctx) => {
 		cwd = ctx.cwd;
 		const paths = findCapsFiles(cwd);
@@ -169,46 +197,19 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 			.map(f => ({ ...f, enabled: saved[f.relativePath] !== undefined ? saved[f.relativePath] : true, isRoot: true }));
 		subdirFiles = [];
 
-		// Show startup widget
-		if (rootFiles.length > 0 && ctx.hasUI) {
-			refreshWidget(ctx);
+		// Show as a message in the chat stream
+		if (rootFiles.length > 0) {
+			pi.sendMessage({
+				customType: "caps-context",
+				content: "CAPS context loaded",
+				display: true,
+			});
 		}
 	});
 
 	pi.on("session_shutdown", async () => {
 		if (rootFiles.length > 0) saveState(cwd, rootFiles);
 	});
-
-	// Keep widget alive after chat
-	pi.on("agent_end", async (_event, ctx) => {
-		refreshWidget(ctx);
-	});
-
-	function refreshWidget(ctx: any) {
-		if (!ctx.hasUI) return;
-		if (rootFiles.length === 0 && subdirFiles.length === 0) {
-			ctx.ui.setWidget("caps-context", undefined);
-			return;
-		}
-		ctx.ui.setWidget("caps-context", (_tui: any, theme: Theme) => {
-			return {
-				render: () => {
-					const lines: string[] = [];
-					lines.push(theme.fg("accent", "[CAPS Context]") + theme.fg("dim", "  /caps to toggle"));
-					for (const f of rootFiles) {
-						if (f.enabled) lines.push(theme.fg("muted", `  ${f.relativePath}`));
-					}
-					for (const f of subdirFiles) {
-						lines.push(theme.fg("muted", `  ${f.relativePath}`));
-					}
-					const off = rootFiles.filter(f => !f.enabled).length;
-					if (off > 0) lines.push(theme.fg("dim", `  ${off} file${off > 1 ? "s" : ""} not in context`));
-					return lines;
-				},
-				invalidate: () => {},
-			};
-		});
-	}
 
 	// /caps + ctrl+shift+c — only toggle root files
 	const openSelector = async (ctx: any) => {
@@ -226,7 +227,12 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 			return selector;
 		}, { overlay: true });
 
-		refreshWidget(ctx);
+		// Show updated state as a new message
+		pi.sendMessage({
+			customType: "caps-context",
+			content: "CAPS context updated",
+			display: true,
+		});
 	};
 
 	pi.registerCommand("caps", {
@@ -240,7 +246,6 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 	});
 
 	pi.on("before_agent_start", async (event, ctx) => {
-		// Discover subdirectory files
 		const seenPaths = new Set([...rootFiles, ...subdirFiles].map(f => f.relativePath));
 
 		try {
@@ -266,7 +271,6 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 			}
 		} catch { /* fallback */ }
 
-		// Inject: enabled root files + all subdir files
 		const enabled = [...rootFiles.filter(f => f.enabled), ...subdirFiles];
 		if (enabled.length === 0) return;
 
