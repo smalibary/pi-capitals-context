@@ -182,6 +182,7 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 	let subdirFiles: FileEntry[] = [];
 	let cwd = "";
 	let startupShown = false;
+	let firstMsgSent = false;
 
 	// Register custom message renderer
 	pi.registerMessageRenderer("caps-context", (_message, _options, theme) => {
@@ -215,6 +216,7 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 
 	// /caps + ctrl+shift+c
 	const openSelector = async (ctx: any) => {
+		if (firstMsgSent) return;
 		if (rootFiles.length === 0) {
 			ctx.ui.notify("No root CAPS files found", "info");
 			return;
@@ -243,6 +245,7 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 	});
 
 	pi.on("before_agent_start", async (event, ctx) => {
+		firstMsgSent = true;
 		const seenPaths = new Set([...rootFiles, ...subdirFiles].map(f => f.relativePath));
 
 		try {
