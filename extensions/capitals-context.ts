@@ -205,7 +205,14 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 				handle.close();
 				resolve();
 			};
-			const handle = ctx.ui.custom(selector);
+			const handle = ctx.ui.custom((_tui: any, _theme: any, _kb: any, done: () => void) => {
+				selector.onDone = () => {
+					handle.close();
+					done();
+					resolve();
+				};
+				return selector;
+			});
 		});
 
 		updateWidget(ctx, allFiles);
