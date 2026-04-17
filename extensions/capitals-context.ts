@@ -169,7 +169,7 @@ function updateWidget(ctx: any, files: FileEntry[]) {
 		lines.push("");
 
 		// Header
-		lines.push(theme.fg("accent", "[CAPS Context]"));
+		lines.push(theme.fg("accent", "[CAPS Context]") + theme.fg("dim", "  /caps to toggle"));
 
 		// Only show enabled files
 		for (const f of files) {
@@ -181,7 +181,7 @@ function updateWidget(ctx: any, files: FileEntry[]) {
 		// If any disabled, show count
 		const off = files.filter(f => !f.enabled).length;
 		if (off > 0) {
-			lines.push(theme.fg("dim", `  ${off} file${off > 1 ? "s" : ""} not in context · /caps to toggle`));
+			lines.push(theme.fg("dim", `  ${off} file${off > 1 ? "s" : ""} not in context`));
 		}
 
 		return { render: () => lines, invalidate: () => {} };
