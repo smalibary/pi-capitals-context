@@ -200,19 +200,11 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 
 		const selector = new CapsSelector(allFiles);
 
-		await new Promise<void>((resolve) => {
+		await ctx.ui.custom((_tui: any, _theme: any, _kb: any, done: () => void) => {
 			selector.onDone = () => {
-				handle.close();
-				resolve();
+				done();
 			};
-			const handle = ctx.ui.custom((_tui: any, _theme: any, _kb: any, done: () => void) => {
-				selector.onDone = () => {
-					handle.close();
-					done();
-					resolve();
-				};
-				return selector;
-			});
+			return selector;
 		});
 
 		updateWidget(ctx, allFiles);
