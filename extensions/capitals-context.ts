@@ -3,14 +3,9 @@
  *
  * Finds ALL CAPS markdown files and injects their contents into the system prompt.
  *
- * Behavior:
- * - Root: scans cwd for ALL_CAPS.md files (e.g. NOTES.md, TODO.md, RULES.md)
- * - Subdirectories: scans prompt + session history for subdirectory references
- * - Skips AGENTS.md and CLAUDE.md (already loaded by pi natively)
- * - /caps command or ctrl+shift+c opens interactive toggler (overlay)
- * - Toggle state persists between sessions
- *
- * Place in ~/.pi/agent/extensions/ or .pi/extensions/
+ * - /caps command or ctrl+shift+c opens interactive overlay toggler
+ * - Toggle state persists between sessions (.pi/caps-context-state.json)
+ * - Skips AGENTS.md and CLAUDE.md
  */
 
 import * as fs from "node:fs";
@@ -33,22 +28,16 @@ interface FileEntry {
 function findCapsFiles(dir: string): string[] {
 	if (!fs.existsSync(dir)) return [];
 	try {
-		return fs
-			.readdirSync(dir)
+		return fs.readdirSync(dir)
 			.filter((name) => CAPS_FILE_RE.test(name) && !SKIP_FILES.has(name))
 			.map((name) => path.join(dir, name))
-			.filter((fullPath) => {
-				try { return fs.statSync(fullPath).isFile(); } catch { return false; }
-			});
+			.filter((fp) => { try { return fs.statSync(fp).isFile(); } catch { return false; } });
 	} catch { return []; }
 }
 
-function readFileContent(fullPath: string, cwd: string): { relativePath: string; content: string } | null {
+function readFileContent(fp: string, cwd: string): { relativePath: string; content: string } | null {
 	try {
-		return {
-			relativePath: path.relative(cwd, fullPath).replace(/\\/g, "/"),
-			content: fs.readFileSync(fullPath, "utf-8"),
-		};
+		return { relativePath: path.relative(cwd, fp).replace(/\\/g, "/"), content: fs.readFileSync(fp, "utf-8") };
 	} catch { return null; }
 }
 
@@ -59,14 +48,13 @@ function extractSubdirs(text: string, cwd: string): Set<string> {
 	catch { return dirs; }
 
 	const re = /(?:\.?[/\\])?([A-Za-z0-9_-]+)[/\\][\w./\\-]+/g;
-	let match;
-	while ((match = re.exec(text)) !== null) {
-		if (realDirs.includes(match[1])) dirs.add(path.join(cwd, match[1]));
+	let m;
+	while ((m = re.exec(text)) !== null) {
+		if (realDirs.includes(m[1])) dirs.add(path.join(cwd, m[1]));
 	}
-
 	const lower = text.toLowerCase();
-	for (const dir of realDirs) {
-		if (lower.includes(dir.toLowerCase())) dirs.add(path.join(cwd, dir));
+	for (const d of realDirs) {
+		if (lower.includes(d.toLowerCase())) dirs.add(path.join(cwd, d));
 	}
 	return dirs;
 }
@@ -74,10 +62,8 @@ function extractSubdirs(text: string, cwd: string): Set<string> {
 // ── State persistence ────────────────────────────────────────
 
 function loadState(cwd: string): Record<string, boolean> {
-	const filePath = path.join(cwd, ".pi", STATE_FILE);
-	try {
-		return JSON.parse(fs.readFileSync(filePath, "utf-8"));
-	} catch { return {}; }
+	try { return JSON.parse(fs.readFileSync(path.join(cwd, ".pi", STATE_FILE), "utf-8")); }
+	catch { return {}; }
 }
 
 function saveState(cwd: string, files: FileEntry[]) {
@@ -88,18 +74,19 @@ function saveState(cwd: string, files: FileEntry[]) {
 	fs.writeFileSync(path.join(dir, STATE_FILE), JSON.stringify(state, null, "\t"));
 }
 
-// ── Checkbox overlay selector ────────────────────────────────
+// ── Overlay selector ─────────────────────────────────────────
 
 class CapsSelector {
 	private items: FileEntry[];
-	private cursor = 0; // 0 = toggle-all, 1..n = files
+	private cursor = 0;
+	private theme: Theme;
 	private cachedWidth?: number;
 	private cachedLines?: string[];
-
 	public onDone?: () => void;
 
-	constructor(items: FileEntry[]) {
+	constructor(items: FileEntry[], theme: Theme) {
 		this.items = items;
+		this.theme = theme;
 	}
 
 	handleInput(data: string): void {
@@ -111,8 +98,8 @@ class CapsSelector {
 			this.invalidate();
 		} else if (matchesKey(data, Key.space)) {
 			if (this.cursor === 0) {
-				const anyEnabled = this.items.some(f => f.enabled);
-				for (const f of this.items) f.enabled = !anyEnabled;
+				const anyOn = this.items.some(f => f.enabled);
+				for (const f of this.items) f.enabled = !anyOn;
 			} else {
 				this.items[this.cursor - 1].enabled = !this.items[this.cursor - 1].enabled;
 			}
@@ -125,35 +112,39 @@ class CapsSelector {
 	render(width: number): string[] {
 		if (this.cachedLines && this.cachedWidth === width) return this.cachedLines;
 
-		const allEnabled = this.items.every(f => f.enabled);
-		const noneEnabled = this.items.every(f => !f.enabled);
-		const allCheck = allEnabled ? "☑" : noneEnabled ? "☐" : "◑";
-
+		const t = this.theme;
 		const lines: string[] = [];
 
-		// Header
-		lines.push(truncateToWidth(`  [CAPS Context]`, width));
+		// Blank line for spacing
+		lines.push("");
 
-		// Toggle-all
-		const prefix = this.cursor === 0 ? "> " : "  ";
-		lines.push(truncateToWidth(`${prefix}${allCheck} Toggle all`, width));
+		// Header
+		const allOn = this.items.every(f => f.enabled);
+		const noneOn = this.items.every(f => !f.enabled);
+		const allCheck = allOn ? "☑" : noneOn ? "☐" : "◑";
+		lines.push(t.fg("accent", `  ${allCheck} [CAPS Context]`));
+
+		// Toggle all
+		const pre = this.cursor === 0 ? "> " : "  ";
+		lines.push(truncateToWidth(`${pre}${allCheck} Toggle all`, width));
 
 		// Files
 		for (let i = 0; i < this.items.length; i++) {
 			const f = this.items[i];
 			const p = this.cursor === i + 1 ? "> " : "  ";
 			const c = f.enabled ? "☑" : "☐";
-			lines.push(truncateToWidth(`${p}${c} ${f.relativePath}`, width));
+			const line = `${p}${c} ${f.relativePath}`;
+			lines.push(truncateToWidth(f.enabled ? line : t.fg("dim", line), width));
 		}
 
 		// Disabled count
-		const disabled = this.items.filter(f => !f.enabled).length;
-		if (disabled > 0) {
-			lines.push(truncateToWidth(`  ${disabled} file${disabled > 1 ? "s" : ""} not in context`, width));
+		const off = this.items.filter(f => !f.enabled).length;
+		if (off > 0) {
+			lines.push(t.fg("dim", `  ${off} file${off > 1 ? "s" : ""} not in context`));
 		}
 
-		lines.push(truncateToWidth("", width));
-		lines.push(truncateToWidth("  ↑↓ navigate · space toggle · enter/esc done", width));
+		lines.push("");
+		lines.push(t.fg("dim", "  ↑↓ navigate · space toggle · enter/esc done"));
 
 		this.cachedLines = lines;
 		this.cachedWidth = width;
@@ -166,7 +157,7 @@ class CapsSelector {
 	}
 }
 
-// ── Widget ───────────────────────────────────────────────────
+// ── Widget (normal chat view) ────────────────────────────────
 
 function updateWidget(ctx: any, files: FileEntry[]) {
 	if (!ctx.hasUI || files.length === 0) return;
@@ -174,28 +165,26 @@ function updateWidget(ctx: any, files: FileEntry[]) {
 	ctx.ui.setWidget("caps-context", (_tui: any, theme: Theme) => {
 		const lines: string[] = [];
 
-		// Header — clean, no checkboxes
+		// Blank line for spacing
+		lines.push("");
+
+		// Header
 		lines.push(theme.fg("accent", "[CAPS Context]"));
 
-		// Files — show enabled/disabled with color
+		// Only show enabled files
 		for (const f of files) {
 			if (f.enabled) {
 				lines.push(theme.fg("muted", `  ${f.relativePath}`));
-			} else {
-				lines.push(theme.fg("dim", `  ${f.relativePath} (off)`));
 			}
 		}
 
-		// Disabled count
-		const disabled = files.filter(f => !f.enabled).length;
-		if (disabled > 0) {
-			lines.push(theme.fg("dim", `  ${disabled} file${disabled > 1 ? "s" : ""} not in context`));
+		// If any disabled, show count
+		const off = files.filter(f => !f.enabled).length;
+		if (off > 0) {
+			lines.push(theme.fg("dim", `  ${off} file${off > 1 ? "s" : ""} not in context · /caps to toggle`));
 		}
 
-		return {
-			render: () => lines,
-			invalidate: () => {},
-		};
+		return { render: () => lines, invalidate: () => {} };
 	});
 }
 
@@ -207,20 +196,12 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 
 	pi.on("session_start", async (_event, ctx) => {
 		cwd = ctx.cwd;
-
-		// Discover root files
 		const paths = findCapsFiles(cwd);
-		const discovered = paths
-			.map(p => readFileContent(p, cwd))
-			.filter((f): f is NonNullable<typeof f> => f !== null);
-
-		// Restore persisted state
 		const saved = loadState(cwd);
-		allFiles = discovered.map(f => ({
-			...f,
-			enabled: saved[f.relativePath] !== undefined ? saved[f.relativePath] : true,
-		}));
-
+		allFiles = paths
+			.map(p => readFileContent(p, cwd))
+			.filter((f): f is NonNullable<typeof f> => f !== null)
+			.map(f => ({ ...f, enabled: saved[f.relativePath] !== undefined ? saved[f.relativePath] : true }));
 		updateWidget(ctx, allFiles);
 	});
 
@@ -228,15 +209,15 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 		if (allFiles.length > 0) saveState(cwd, allFiles);
 	});
 
-	// /caps command + ctrl+shift+c shortcut
+	// /caps + ctrl+shift+c
 	const openSelector = async (ctx: any) => {
 		if (allFiles.length === 0) {
 			ctx.ui.notify("No CAPS files found", "info");
 			return;
 		}
 
-		await ctx.ui.custom((_tui: any, _theme: any, _kb: any, done: () => void) => {
-			const selector = new CapsSelector(allFiles);
+		await ctx.ui.custom((_tui: any, theme: Theme, _kb: any, done: () => void) => {
+			const selector = new CapsSelector(allFiles, theme);
 			selector.onDone = () => {
 				saveState(cwd, allFiles);
 				done();
@@ -262,14 +243,13 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 
 		try {
 			const subdirs = new Set<string>();
-
-			for (const dir of extractSubdirs(event.prompt, cwd)) subdirs.add(dir);
+			for (const d of extractSubdirs(event.prompt, cwd)) subdirs.add(d);
 
 			const entries = ctx.sessionManager.getEntries();
 			for (const entry of entries) {
 				if (entry.type === "tool_call" && entry.input) {
-					const inputStr = typeof entry.input === "string" ? entry.input : JSON.stringify(entry.input);
-					for (const dir of extractSubdirs(inputStr, cwd)) subdirs.add(dir);
+					const s = typeof entry.input === "string" ? entry.input : JSON.stringify(entry.input);
+					for (const d of extractSubdirs(s, cwd)) subdirs.add(d);
 				}
 			}
 
@@ -286,18 +266,16 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 					}
 				}
 			}
-
 			updateWidget(ctx, allFiles);
 		} catch { /* fallback */ }
 
-		const enabledFiles = allFiles.filter(f => f.enabled);
-		if (enabledFiles.length === 0) return;
+		const enabled = allFiles.filter(f => f.enabled);
+		if (enabled.length === 0) return;
 
 		let extra = "\n\n## Additional Context (CAPS files)\n";
-		for (const f of enabledFiles) {
+		for (const f of enabled) {
 			extra += `\n### ${f.relativePath}\n\n${f.content}\n`;
 		}
-
 		return { systemPrompt: event.systemPrompt + extra };
 	});
 }
