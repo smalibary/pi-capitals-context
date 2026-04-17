@@ -169,15 +169,15 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 			.map(f => ({ ...f, enabled: saved[f.relativePath] !== undefined ? saved[f.relativePath] : true, isRoot: true }));
 		subdirFiles = [];
 
-		// Show startup notification
+		// Show startup status in footer
 		if (rootFiles.length > 0 && ctx.hasUI) {
 			const enabled = rootFiles.filter(f => f.enabled);
 			const disabled = rootFiles.filter(f => !f.enabled);
-			let msg = enabled.map(f => f.relativePath).join(", ");
+			let msg = `CAPS: ${enabled.map(f => f.relativePath).join(", ")}`;
 			if (disabled.length > 0) {
-				msg += ` · ${disabled.length} off (/caps to toggle)`;
+				msg += ` · ${disabled.length} off`;
 			}
-			ctx.ui.notify(`CAPS: ${msg}`, "info");
+			ctx.ui.setStatus("caps-context", msg);
 		}
 	});
 
