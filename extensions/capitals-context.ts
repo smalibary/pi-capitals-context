@@ -3,8 +3,9 @@
  *
  * Finds ALL CAPS markdown files and injects their contents into the system prompt.
  *
- * - /caps command or ctrl+shift+c opens interactive overlay toggler
- * - Toggle state persists between sessions (.pi/caps-context-state.json)
+ * - Root CAPS files: toggleable via /caps (persists in .pi/caps-context-state.json)
+ * - Subdirectory CAPS files: always injected when referenced, not toggleable
+ * - /caps or ctrl+shift+c opens overlay toggler (root files only)
  * - Skips AGENTS.md and CLAUDE.md
  */
 
@@ -21,6 +22,7 @@ interface FileEntry {
 	relativePath: string;
 	content: string;
 	enabled: boolean;
+	isRoot: boolean;
 }
 
 // ── File discovery ───────────────────────────────────────────
@@ -74,7 +76,7 @@ function saveState(cwd: string, files: FileEntry[]) {
 	fs.writeFileSync(path.join(dir, STATE_FILE), JSON.stringify(state, null, "\t"));
 }
 
-// ── Overlay selector ─────────────────────────────────────────
+// ── Overlay selector (root files only) ───────────────────────
 
 class CapsSelector {
 	private items: FileEntry[];
@@ -115,20 +117,15 @@ class CapsSelector {
 		const t = this.theme;
 		const lines: string[] = [];
 
-		// Blank line for spacing
-		lines.push("");
-
-		// Header
 		const allOn = this.items.every(f => f.enabled);
 		const noneOn = this.items.every(f => !f.enabled);
 		const allCheck = allOn ? "☑" : noneOn ? "☐" : "◑";
+
 		lines.push(t.fg("accent", `  ${allCheck} [CAPS Context]`));
 
-		// Toggle all
 		const pre = this.cursor === 0 ? "> " : "  ";
 		lines.push(truncateToWidth(`${pre}${allCheck} Toggle all`, width));
 
-		// Files
 		for (let i = 0; i < this.items.length; i++) {
 			const f = this.items[i];
 			const p = this.cursor === i + 1 ? "> " : "  ";
@@ -137,13 +134,11 @@ class CapsSelector {
 			lines.push(truncateToWidth(f.enabled ? line : t.fg("dim", line), width));
 		}
 
-		// Disabled count
 		const off = this.items.filter(f => !f.enabled).length;
 		if (off > 0) {
 			lines.push(t.fg("dim", `  ${off} file${off > 1 ? "s" : ""} not in context`));
 		}
 
-		lines.push("");
 		lines.push(t.fg("dim", "  ↑↓ navigate · space toggle · enter/esc done"));
 
 		this.cachedLines = lines;
@@ -157,89 +152,106 @@ class CapsSelector {
 	}
 }
 
-// ── Widget (normal chat view) ────────────────────────────────
+// ── Widget (below editor, always visible) ────────────────────
 
-function updateWidget(ctx: any, files: FileEntry[]) {
-	if (!ctx.hasUI || files.length === 0) return;
+function updateWidget(ctx: any, rootFiles: FileEntry[], subdirFiles: FileEntry[]) {
+	if (!ctx.hasUI || (rootFiles.length === 0 && subdirFiles.length === 0)) {
+		ctx.ui.setWidget("caps-context", undefined);
+		return;
+	}
 
 	ctx.ui.setWidget("caps-context", (_tui: any, theme: Theme) => {
 		const lines: string[] = [];
 
-		// Blank line for spacing
-		lines.push("");
-
 		// Header
 		lines.push(theme.fg("accent", "[CAPS Context]") + theme.fg("dim", "  /caps to toggle"));
 
-		// Only show enabled files
-		for (const f of files) {
+		// Root files (toggleable)
+		for (const f of rootFiles) {
 			if (f.enabled) {
 				lines.push(theme.fg("muted", `  ${f.relativePath}`));
 			}
 		}
 
-		// If any disabled, show count
-		const off = files.filter(f => !f.enabled).length;
+		// Subdir files (always on, shown with path)
+		for (const f of subdirFiles) {
+			lines.push(theme.fg("muted", `  ${f.relativePath}`));
+		}
+
+		// Disabled count (root only)
+		const off = rootFiles.filter(f => !f.enabled).length;
 		if (off > 0) {
 			lines.push(theme.fg("dim", `  ${off} file${off > 1 ? "s" : ""} not in context`));
 		}
 
 		return { render: () => lines, invalidate: () => {} };
-	});
+	}, { placement: "belowEditor" });
 }
 
 // ── Main extension ───────────────────────────────────────────
 
 export default function capitalsContextExtension(pi: ExtensionAPI) {
-	let allFiles: FileEntry[] = [];
+	let rootFiles: FileEntry[] = [];
+	let subdirFiles: FileEntry[] = [];
 	let cwd = "";
+
+	function refreshWidget(ctx: any) {
+		updateWidget(ctx, rootFiles, subdirFiles);
+	}
 
 	pi.on("session_start", async (_event, ctx) => {
 		cwd = ctx.cwd;
 		const paths = findCapsFiles(cwd);
 		const saved = loadState(cwd);
-		allFiles = paths
+		rootFiles = paths
 			.map(p => readFileContent(p, cwd))
 			.filter((f): f is NonNullable<typeof f> => f !== null)
-			.map(f => ({ ...f, enabled: saved[f.relativePath] !== undefined ? saved[f.relativePath] : true }));
-		updateWidget(ctx, allFiles);
+			.map(f => ({ ...f, enabled: saved[f.relativePath] !== undefined ? saved[f.relativePath] : true, isRoot: true }));
+		subdirFiles = [];
+		refreshWidget(ctx);
 	});
 
 	pi.on("session_shutdown", async () => {
-		if (allFiles.length > 0) saveState(cwd, allFiles);
+		if (rootFiles.length > 0) saveState(cwd, rootFiles);
 	});
 
-	// /caps + ctrl+shift+c
+	// Keep widget alive after agent finishes
+	pi.on("agent_end", async (_event, ctx) => {
+		refreshWidget(ctx);
+	});
+
+	// /caps + ctrl+shift+c — only toggle root files
 	const openSelector = async (ctx: any) => {
-		if (allFiles.length === 0) {
-			ctx.ui.notify("No CAPS files found", "info");
+		if (rootFiles.length === 0) {
+			ctx.ui.notify("No root CAPS files found", "info");
 			return;
 		}
 
 		await ctx.ui.custom((_tui: any, theme: Theme, _kb: any, done: () => void) => {
-			const selector = new CapsSelector(allFiles, theme);
+			const selector = new CapsSelector(rootFiles, theme);
 			selector.onDone = () => {
-				saveState(cwd, allFiles);
+				saveState(cwd, rootFiles);
 				done();
 			};
 			return selector;
 		}, { overlay: true });
 
-		updateWidget(ctx, allFiles);
+		refreshWidget(ctx);
 	};
 
 	pi.registerCommand("caps", {
-		description: "Toggle CAPS context files",
+		description: "Toggle root CAPS context files",
 		handler: async (_args, ctx) => { await openSelector(ctx); },
 	});
 
 	pi.registerShortcut("ctrl+shift+c", {
-		description: "Toggle CAPS context files",
+		description: "Toggle root CAPS context files",
 		handler: async (ctx) => { await openSelector(ctx); },
 	});
 
 	pi.on("before_agent_start", async (event, ctx) => {
-		const seenPaths = new Set(allFiles.map(f => f.relativePath));
+		// Discover subdirectory files
+		const seenPaths = new Set([...rootFiles, ...subdirFiles].map(f => f.relativePath));
 
 		try {
 			const subdirs = new Set<string>();
@@ -253,29 +265,26 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 				}
 			}
 
-			const saved = loadState(cwd);
 			for (const dir of subdirs) {
 				for (const p of findCapsFiles(dir)) {
 					const file = readFileContent(p, cwd);
 					if (file && !seenPaths.has(file.relativePath)) {
 						seenPaths.add(file.relativePath);
-						allFiles.push({
-							...file,
-							enabled: saved[file.relativePath] !== undefined ? saved[file.relativePath] : true,
-						});
+						subdirFiles.push({ ...file, enabled: true, isRoot: false });
 					}
 				}
 			}
-			updateWidget(ctx, allFiles);
 		} catch { /* fallback */ }
 
-		const enabled = allFiles.filter(f => f.enabled);
+		// Inject: enabled root files + all subdir files
+		const enabled = [...rootFiles.filter(f => f.enabled), ...subdirFiles];
 		if (enabled.length === 0) return;
 
 		let extra = "\n\n## Additional Context (CAPS files)\n";
 		for (const f of enabled) {
 			extra += `\n### ${f.relativePath}\n\n${f.content}\n`;
 		}
+
 		return { systemPrompt: event.systemPrompt + extra };
 	});
 }
