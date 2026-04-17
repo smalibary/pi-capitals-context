@@ -231,12 +231,7 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 			return selector;
 		}, { overlay: true });
 
-		// Show updated state
-		pi.sendMessage({
-			customType: "caps-context",
-			content: "CAPS context updated",
-			display: true,
-		});
+		// No second message — state saved, renderer reads live data
 	};
 
 	pi.registerShortcut("ctrl+shift+c", {
