@@ -182,8 +182,11 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 	let subdirFiles: FileEntry[] = [];
 	let cwd = "";
 
-	// Register custom message renderer
+	let userHasChatted = false;
+
+	// Register custom message renderer — hide after first user message
 	pi.registerMessageRenderer("caps-context", (message, _options, theme) => {
+		if (userHasChatted) return new Text("", 0, 0);
 		return new Text(buildDisplayText(rootFiles, subdirFiles, theme), 0, 0);
 	});
 
@@ -246,6 +249,7 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 	});
 
 	pi.on("before_agent_start", async (event, ctx) => {
+		userHasChatted = true;
 		const seenPaths = new Set([...rootFiles, ...subdirFiles].map(f => f.relativePath));
 
 		try {
