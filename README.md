@@ -24,15 +24,16 @@ Drop any `ALL_CAPS.md` file in your project root or subdirectories.
 
 ```
 my-project/
-├── STATUS.md       ← project status, always in context
-├── DESIGN.md       ← architecture decisions
-├── WORKFLOW.md     ← team conventions and processes
-├── STYLE.md        ← coding or writing style rules
-├── SECRETS.md      ← environment and config notes
-├── MGMT5701/
-│   └── RULES.md    ← loaded when you mention MGMT5701
-└── ACCT5906/
-    └── GUIDE.md    ← loaded when you mention ACCT5906
+├── STATUS.md           ← project status, always in context
+├── DESIGN.md           ← architecture decisions
+├── WORKFLOW.md         ← conventions and processes
+├── STYLE.md            ← coding or writing style rules
+├── src/
+│   └── RULES.md        ← loaded when you mention src/
+├── api/
+│   └── GUIDE.md        ← loaded when you mention api/
+└── docs/
+    └── CONTEXT.md      ← loaded when you mention docs/
 ```
 
 ## Examples
@@ -43,10 +44,10 @@ Use it for anything you want the agent to always know:
 - `DESIGN.md` — architecture decisions, tech stack, system design
 - `WORKFLOW.md` — git conventions, PR process, deployment steps
 - `STYLE.md` — code style, writing tone, formatting rules
-- `SECRETS.md` — env variable names, config keys (values only locally)
 - `CONSTRAINTS.md` — limitations, budgets, deadlines
 - `CONTEXT.md` — domain knowledge, glossary, acronyms
 - `TODO.md` — outstanding tasks and priorities
+- `SECRETS.md` — env variable names, config keys
 
 ## Filename rules
 
