@@ -44,7 +44,6 @@ function readFileContent(fullPath: string, cwd: string): { relativePath: string;
 // Extract top-level subdirectory names from a blob of text
 function extractSubdirs(text: string, cwd: string): Set<string> {
 	const dirs = new Set<string>();
-	// Get actual subdirectories on disk to match against
 	let realDirs: string[] = [];
 	try { realDirs = fs.readdirSync(cwd, { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name); }
 	catch { return dirs; }
@@ -68,6 +67,12 @@ function extractSubdirs(text: string, cwd: string): Set<string> {
 	return dirs;
 }
 
+function updateWidget(ctx: any, files: { relativePath: string; content: string }[]) {
+	if (!ctx.hasUI || files.length === 0) return;
+	const lines = files.map((f) => `  ${f.relativePath}`);
+	ctx.ui.setWidget("caps-context", lines);
+}
+
 export default function capitalsContextExtension(pi: ExtensionAPI) {
 	let rootFiles: { relativePath: string; content: string }[] = [];
 	let cwd = "";
@@ -76,10 +81,11 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 		cwd = ctx.cwd;
 		const paths = findCapsFiles(cwd);
 		rootFiles = paths.map((p) => readFileContent(p, cwd)).filter((f): f is NonNullable<typeof f> => f !== null);
-		if (rootFiles.length > 0 && ctx.hasUI) {
-			const names = rootFiles.map((f) => f.relativePath).join(", ");
-			ctx.ui.notify(`CAPS context: ${names}`, "info");
-		}
+		updateWidget(ctx, rootFiles);
+	});
+
+	pi.on("session_shutdown", async (_event, ctx) => {
+		ctx.ui.setWidget("caps-context", undefined);
 	});
 
 	pi.on("before_agent_start", async (event, ctx) => {
@@ -116,6 +122,9 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 					}
 				}
 			}
+
+			// Update widget with all loaded files (root + subdirs)
+			updateWidget(ctx, allFiles);
 		} catch { /* fallback to root files only */ }
 
 		if (allFiles.length === 0) return;
