@@ -75,31 +75,31 @@ function saveState(cwd: string, files: FileEntry[]) {
 	fs.writeFileSync(path.join(dir, STATE_FILE), JSON.stringify(state, null, "\t"));
 }
 
-// ── Build display text for message ───────────────────────────
+// ── Build display text ───────────────────────────────────────
 
 function buildDisplayText(rootFiles: FileEntry[], subdirFiles: FileEntry[], theme: Theme): string {
 	let text = theme.fg("accent", "[CAPS Context]");
-	if (rootFiles.length > 0) text += theme.fg("dim", "  /caps to toggle");
-	text += "\n";
+	const enabled = rootFiles.filter(f => f.enabled);
+	const disabled = rootFiles.filter(f => !f.enabled);
 
-	for (const f of rootFiles) {
-		if (f.enabled) {
-			text += theme.fg("muted", `  ${f.relativePath}`) + "\n";
+	if (enabled.length > 0) {
+		for (const f of enabled) {
+			text += "\n" + theme.fg("muted", `  ${f.relativePath}`);
 		}
 	}
 	for (const f of subdirFiles) {
-		text += theme.fg("muted", `  ${f.relativePath}`) + "\n";
+		text += "\n" + theme.fg("muted", `  ${f.relativePath}`);
 	}
-
-	const off = rootFiles.filter(f => !f.enabled).length;
-	if (off > 0) {
-		text += theme.fg("dim", `  ${off} file${off > 1 ? "s" : ""} not in context`) + "\n";
+	if (disabled.length > 0) {
+		text += "\n" + theme.fg("dim", `  ${disabled.length} file${disabled.length > 1 ? "s" : ""} not in context · /caps to toggle`);
+	} else if (rootFiles.length > 0) {
+		text += "\n" + theme.fg("dim", "  /caps to toggle");
 	}
 
 	return text;
 }
 
-// ── Overlay selector (root files only) ───────────────────────
+// ── Overlay selector ─────────────────────────────────────────
 
 class CapsSelector {
 	private items: FileEntry[];
@@ -181,12 +181,10 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 	let rootFiles: FileEntry[] = [];
 	let subdirFiles: FileEntry[] = [];
 	let cwd = "";
+	let startupShown = false;
 
-	let userHasChatted = false;
-
-	// Register custom message renderer — hide after first user message
-	pi.registerMessageRenderer("caps-context", (message, _options, theme) => {
-		if (userHasChatted) return new Text("", 0, 0);
+	// Register custom message renderer
+	pi.registerMessageRenderer("caps-context", (_message, _options, theme) => {
 		return new Text(buildDisplayText(rootFiles, subdirFiles, theme), 0, 0);
 	});
 
@@ -200,8 +198,9 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 			.map(f => ({ ...f, enabled: saved[f.relativePath] !== undefined ? saved[f.relativePath] : true, isRoot: true }));
 		subdirFiles = [];
 
-		// Show as a message in the chat stream
-		if (rootFiles.length > 0) {
+		// Only send once per session
+		if (rootFiles.length > 0 && !startupShown) {
+			startupShown = true;
 			pi.sendMessage({
 				customType: "caps-context",
 				content: "CAPS context loaded",
@@ -214,7 +213,7 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 		if (rootFiles.length > 0) saveState(cwd, rootFiles);
 	});
 
-	// /caps + ctrl+shift+c — only toggle root files
+	// /caps + ctrl+shift+c
 	const openSelector = async (ctx: any) => {
 		if (rootFiles.length === 0) {
 			ctx.ui.notify("No root CAPS files found", "info");
@@ -230,8 +229,7 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 			return selector;
 		}, { overlay: true });
 
-		// Show updated state as a new message
-		userHasChatted = false;
+		// Show updated state
 		pi.sendMessage({
 			customType: "caps-context",
 			content: "CAPS context updated",
@@ -250,7 +248,6 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 	});
 
 	pi.on("before_agent_start", async (event, ctx) => {
-		userHasChatted = true;
 		const seenPaths = new Set([...rootFiles, ...subdirFiles].map(f => f.relativePath));
 
 		try {
