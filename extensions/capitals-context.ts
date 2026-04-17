@@ -231,6 +231,7 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 		}, { overlay: true });
 
 		// Show updated state as a new message
+		userHasChatted = false;
 		pi.sendMessage({
 			customType: "caps-context",
 			content: "CAPS context updated",
