@@ -156,7 +156,7 @@ function updateWidget(ctx: any, files: FileEntry[]) {
 		const allEnabled = files.every((f) => f.enabled);
 		const noneEnabled = files.every((f) => !f.enabled);
 		const allCheck = allEnabled ? "☑ " : noneEnabled ? "☐ " : "◑ ";
-		const header = theme.fg("accent", `${allCheck}[CAPS Context]  (# to toggle)`);
+		const header = theme.fg("accent", `${allCheck}[CAPS Context]  (/caps to toggle)`);
 		const lines = files.map((f) => {
 			const check = f.enabled ? "☑" : "☐";
 			const name = f.enabled
@@ -191,13 +191,11 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 		ctx.ui.setWidget("caps-context", undefined);
 	});
 
-	// Intercept # at beginning of input to open selector
-	pi.on("input", async (event, ctx) => {
-		if (event.text !== "#" && event.text !== "# ") return { action: "continue" };
-
+	// Register /caps command and ctrl+shift+c shortcut
+	const openSelector = async (ctx: any) => {
 		if (allFiles.length === 0) {
 			ctx.ui.notify("No CAPS files found", "info");
-			return { action: "handled" };
+			return;
 		}
 
 		const selector = new CapsSelector(allFiles);
@@ -211,7 +209,20 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 		});
 
 		updateWidget(ctx, allFiles);
-		return { action: "handled" };
+	};
+
+	pi.registerCommand("caps", {
+		description: "Toggle CAPS context files",
+		handler: async (_args, ctx) => {
+			await openSelector(ctx);
+		},
+	});
+
+	pi.registerShortcut("ctrl+shift+c", {
+		description: "Toggle CAPS context files",
+		handler: async (ctx) => {
+			await openSelector(ctx);
+		},
 	});
 
 	pi.on("before_agent_start", async (event, ctx) => {
