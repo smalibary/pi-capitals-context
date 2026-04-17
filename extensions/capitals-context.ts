@@ -91,9 +91,9 @@ function buildDisplayText(rootFiles: FileEntry[], subdirFiles: FileEntry[], them
 		text += "\n" + theme.fg("muted", `  ${f.relativePath}`);
 	}
 	if (disabled.length > 0) {
-		text += "\n" + theme.fg("dim", `  ${disabled.length} file${disabled.length > 1 ? "s" : ""} not in context · /caps to toggle`);
+		text += "\n" + theme.fg("dim", `  ${disabled.length} file${disabled.length > 1 ? "s" : ""} not in context · ctrl+shift+c to toggle`);
 	} else if (rootFiles.length > 0) {
-		text += "\n" + theme.fg("dim", "  /caps to toggle");
+		text += "\n" + theme.fg("dim", "  ctrl+shift+c to toggle");
 	}
 
 	return text;
@@ -236,11 +236,6 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 			display: true,
 		});
 	};
-
-	pi.registerCommand("caps", {
-		description: "Toggle root CAPS context files",
-		handler: async (_args, ctx) => { await openSelector(ctx); },
-	});
 
 	pi.registerShortcut("ctrl+shift+c", {
 		description: "Toggle root CAPS context files",
