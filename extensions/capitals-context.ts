@@ -152,52 +152,12 @@ class CapsSelector {
 	}
 }
 
-// ── Widget (below editor, always visible) ────────────────────
-
-function updateWidget(ctx: any, rootFiles: FileEntry[], subdirFiles: FileEntry[]) {
-	if (!ctx.hasUI || (rootFiles.length === 0 && subdirFiles.length === 0)) {
-		ctx.ui.setWidget("caps-context", undefined);
-		return;
-	}
-
-	ctx.ui.setWidget("caps-context", (_tui: any, theme: Theme) => {
-		const lines: string[] = [];
-
-		// Header
-		lines.push(theme.fg("accent", "[CAPS Context]") + theme.fg("dim", "  /caps to toggle"));
-
-		// Root files (toggleable)
-		for (const f of rootFiles) {
-			if (f.enabled) {
-				lines.push(theme.fg("muted", `  ${f.relativePath}`));
-			}
-		}
-
-		// Subdir files (always on, shown with path)
-		for (const f of subdirFiles) {
-			lines.push(theme.fg("muted", `  ${f.relativePath}`));
-		}
-
-		// Disabled count (root only)
-		const off = rootFiles.filter(f => !f.enabled).length;
-		if (off > 0) {
-			lines.push(theme.fg("dim", `  ${off} file${off > 1 ? "s" : ""} not in context`));
-		}
-
-		return { render: () => lines, invalidate: () => {} };
-	});
-}
-
 // ── Main extension ───────────────────────────────────────────
 
 export default function capitalsContextExtension(pi: ExtensionAPI) {
 	let rootFiles: FileEntry[] = [];
 	let subdirFiles: FileEntry[] = [];
 	let cwd = "";
-
-	function refreshWidget(ctx: any) {
-		updateWidget(ctx, rootFiles, subdirFiles);
-	}
 
 	pi.on("session_start", async (_event, ctx) => {
 		cwd = ctx.cwd;
@@ -208,16 +168,21 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 			.filter((f): f is NonNullable<typeof f> => f !== null)
 			.map(f => ({ ...f, enabled: saved[f.relativePath] !== undefined ? saved[f.relativePath] : true, isRoot: true }));
 		subdirFiles = [];
-		refreshWidget(ctx);
+
+		// Show startup notification
+		if (rootFiles.length > 0 && ctx.hasUI) {
+			const enabled = rootFiles.filter(f => f.enabled);
+			const disabled = rootFiles.filter(f => !f.enabled);
+			let msg = enabled.map(f => f.relativePath).join(", ");
+			if (disabled.length > 0) {
+				msg += ` · ${disabled.length} off (/caps to toggle)`;
+			}
+			ctx.ui.notify(`CAPS: ${msg}`, "info");
+		}
 	});
 
 	pi.on("session_shutdown", async () => {
 		if (rootFiles.length > 0) saveState(cwd, rootFiles);
-	});
-
-	// Keep widget alive after agent finishes
-	pi.on("agent_end", async (_event, ctx) => {
-		refreshWidget(ctx);
 	});
 
 	// /caps + ctrl+shift+c — only toggle root files
@@ -235,8 +200,6 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 			};
 			return selector;
 		}, { overlay: true });
-
-		refreshWidget(ctx);
 	};
 
 	pi.registerCommand("caps", {
