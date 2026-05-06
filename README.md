@@ -7,7 +7,7 @@ Auto-discovers `ALL_CAPS.md` files and `ALL_CAPS/` folders in your project and i
 - **Root files**: Scans for `ALL_CAPS.md` files like `STATUS.md`, `WORKFLOW.md`, `DESIGN.md`
 - **Root folders**: Scans for `ALL_CAPS/` folders like `RULES/`, `MEMORY/`, `CONTEXT/` — all `.md` files inside are loaded
 - **Subdirectories**: When you reference a subdirectory, it loads CAPS files from that subdirectory too
-- **Toggle**: Press `ctrl+shift+c` at startup to enable/disable individual files or folders
+- **Toggle**: Type `/caps` to enable/disable individual files or folders
 - **Persistent**: Your toggle choices survive across sessions
 - **Skips** `AGENTS.md` and `CLAUDE.md` (already loaded natively)
 
@@ -85,11 +85,13 @@ Each file and folder shows an estimated token count so you can decide what's wor
   RULES/ · 129 tokens
   API/ · 345 tokens
   total: 1.4k tokens
-  ctrl+shift+c to toggle
+  /caps to toggle
 ```
 
 Helps you stay within context limits by seeing exactly what each item costs.
 
 ## Toggle files and folders
 
-At startup, press `ctrl+shift+c` to open the toggler overlay. Use ↑↓ to navigate, space to toggle, enter/esc to close. Folders toggle as a whole — all files inside are on or off together. State persists in `.pi/caps-context-state.json`.
+Type `/caps` to open the toggler overlay. Use ↑↓ to navigate, space to toggle, enter/esc to close. Folders toggle as a whole — all files inside are on or off together. State persists in `.pi/caps-context-state.json`.
+
+To change the keybinding, create or edit `~/.pi/agent/keybindings.json` and bind a custom shortcut to the `caps` command.
