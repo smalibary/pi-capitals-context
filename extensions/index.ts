@@ -5,7 +5,7 @@
  *
  * - Root: ALL_CAPS.md files + ALL_CAPS/ folders (all .md inside)
  * - Subdirectories: ALL_CAPS.md files loaded when referenced (not toggleable)
- * - ctrl+shift+c at startup to toggle root files/folders
+ * - /caps command to toggle root files/folders
  * - State persists in .pi/caps-context-state.json
  * - Skips AGENTS.md and CLAUDE.md
  */
@@ -150,9 +150,9 @@ function buildDisplayText(rootFiles: FileEntry[], subdirFiles: FileEntry[], them
 	}
 
 	if (disabled.length > 0) {
-		text += "\n" + theme.fg("dim", `  ${disabled.length} item${disabled.length > 1 ? "s" : ""} not in context · ctrl+shift+c to toggle`);
+		text += "\n" + theme.fg("dim", `  ${disabled.length} item${disabled.length > 1 ? "s" : ""} not in context · /caps to toggle`);
 	} else if (rootFiles.length > 0) {
-		text += "\n" + theme.fg("dim", "  ctrl+shift+c to toggle");
+		text += "\n" + theme.fg("dim", "  /caps to toggle");
 	}
 
 	return text;
@@ -322,9 +322,9 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 		});
 	};
 
-	pi.registerShortcut("ctrl+shift+c", {
+	pi.registerCommand("caps", {
 		description: "Toggle root CAPS context files",
-		handler: async (ctx) => { await openSelector(ctx); },
+		handler: async (_args, ctx) => { await openSelector(ctx); },
 	});
 
 	pi.on("before_agent_start", async (event, ctx) => {
