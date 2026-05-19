@@ -1,0 +1,8 @@
+node_modules/
+coverage/
+*.log
+*.tmp
+*.stackdump
+.DS_Store
+.pi/caps-context-state.json
+.claude/
