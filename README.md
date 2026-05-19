@@ -17,7 +17,7 @@ pi install npm:pi-capitals-context
 | Global folder | `~/.pi/CAPS/` | Loaded in every project |
 | Subdirectories | `src/GUIDE.md` | Auto-loaded when you reference that folder |
 
-Skips `AGENTS.md` and `CLAUDE.md` (already loaded natively by pi).
+Skips noise by default: `AGENTS.md`, `CLAUDE.md`, `LICENSE`, `LICENSE.md`, `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`. Per-project override via `/caps-advance skip add/remove` or `.pi/caps-config.json`. See [Configuration](#configuration).
 
 ## Supported file types
 
@@ -166,3 +166,61 @@ To bind a custom shortcut to `/caps`, add to `~/.pi/agent/keybindings.json`:
   ]
 }
 ```
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `/caps` | Toggle overlay — root, subdir, and global CAPS files. Daily driver. |
+| `/caps-advance skip <list\|add\|remove\|reset>` | Manage the project skip list. Power-user surface; more subcommands land in v2.3 (profiles, budgets, tags). |
+| `/caps-prompt` | Print the exact text that gets injected into the system prompt. `--copy` pipes to clipboard, `--diff` shows line-diff vs previous turn. Trust check. |
+| `/caps-doctor` | Diagnose discovery, state file, watchers, last injection, config sources. `--verbose` shows every entry in cwd with classification. |
+
+Each command supports `help` (e.g. `/caps-doctor help`) for inline usage.
+
+## Configuration
+
+Defaults work for most projects. Override per-project at `.pi/caps-config.json`, or globally at `~/.pi/caps-config.json`. Project wins over global wins over built-in defaults.
+
+Example — re-include `LICENSE.md` and `README.md` as context (research repo where license terms matter):
+
+```json
+{
+  "skipFiles": ["AGENTS.md", "CLAUDE.md"]
+}
+```
+
+Full schema (all fields optional):
+
+| Field | Type | Default |
+|---|---|---|
+| `skipFiles` | string[] | `["AGENTS.md","CLAUDE.md","LICENSE","LICENSE.md","README.md","CHANGELOG.md","CONTRIBUTING.md","CODE_OF_CONDUCT.md","SECURITY.md"]` |
+| `skipDirs` | string[] | `["AGENTS","CLAUDE","NODE_MODULES","node_modules",".git",".pi"]` |
+| `capsFilePattern` | string (regex) | `"^[A-Z][A-Z0-9_]*\\.md$"` |
+| `capsDirPattern` | string (regex) | `"^[A-Z][A-Z0-9_]*$"` |
+| `textExtensions` | string[] | `[".md",".txt",".yaml",".yml",".json",".toml"]` |
+| `maxFileSizeBytes` | number | `102400` (100KB) |
+| `maxRecursionDepth` | number | `6` |
+| `maxSubdirFiles` | number | `20` |
+
+Invalid values (e.g. unparseable regex, negative numbers) fall back to defaults silently — the tool stays loadable.
+
+Changes take effect on pi restart (config is read at session_start).
+
+## Troubleshooting
+
+When a file you expected to load isn't appearing, run `/caps-doctor`. It tells you:
+
+- Whether the project directory was scanned correctly
+- Which entries were skipped and why (regex mismatch, in skip list, too large, symlink)
+- Where the state file lives and whether it loaded
+- Whether any config override is active
+- Last injection size + tokens
+
+`/caps-doctor --verbose` lists every file in the cwd with `✓`/`✗` classification.
+
+Common cases:
+- *"My file is `notes.md` but doesn't load."* → filename must be ALL-CAPS (`NOTES.md`).
+- *"`LICENSE.md` shouldn't be excluded for my project."* → `/caps-advance skip remove LICENSE.md`, restart pi.
+- *"Tool seems to ignore my edit."* → file watcher only notifies; you must restart pi to reload content.
+- *"`/caps-prompt` shows nothing."* → no files enabled or no CAPS files exist. Run `/caps-doctor`.
