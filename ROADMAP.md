@@ -7,6 +7,20 @@
 
 ---
 
+## Status
+
+| Version | Status | Highlights |
+|---|---|---|
+| **v2.1.0** | ✅ Shipped — 2026-05-20 | tests + CI gate, modular `src/`, all audit bugs fixed, `/caps-advance skip`, `/caps-prompt`, `/caps-doctor`, configurable discovery, defensive limits |
+| **v2.2** | next | state persistence completeness, watcher upgrades, overlay clarity, filter/nav, editor integration |
+| **v2.3** | planned | rest of `/caps-advance` — profiles, token budget, tags, conditions, per-CAPS injection format |
+| **v2.4** | planned | cache & cost — freeze mode, accurate tokens, folder index injection, cache-bust warnings |
+| **v3.0** | planned | platform — `/caps-init`, includes/imports, public API, content search, ephemeral CAPS, auto-context |
+
+See `CHANGELOG.md` for the v2.1.0 release notes.
+
+---
+
 ## Ultimate Vision
 
 **Personal Context Conductor.** You see exactly what AI sees, you choose what's worth paying for, you never waste a token. Manual curation stays the soul — automation only assists, never decides. Terminal-first, single-user, opinionated.
@@ -43,9 +57,11 @@ Boundary: no v2.x release ships features without tests covering them. Tests get 
 
 ---
 
-# v2.1 — Foundation & Safety
+# v2.1 — Foundation & Safety ✅ SHIPPED 2026-05-20
 
 Goal: stop bleeding. No new features until the floor is solid.
+
+All sub-features (F1–F6, plus early F3-10 = v2.3-F0 skip CRUD) merged. See `CHANGELOG.md` for the release entry.
 
 ## v2.1-F1 — Test harness bootstrap [A2]
 
@@ -553,10 +569,10 @@ Things explicitly NOT on the roadmap, with reasons:
 
 # Three Bets For Next Sprint
 
-If only three things ship in v2.1, ship these:
+v2.1 shipped all three original bets (test harness, `/caps-prompt`, `/caps-doctor`). For v2.2, three highest-impact bets:
 
-1. **Test harness (v2.1-F1) + critical bug fixes (v2.1-F3)** — foundation
-2. **`/caps-prompt` (v2.1-F4)** — trust gap. Users must see what model sees.
-3. **`/caps-doctor` (v2.1-F5)** — debuggability. Silent failures are the #1 friction.
+1. **Profiles (v2.3-F1) brought forward** — single feature that takes the tool from "manual toggler" to "task context manager". Already-built `/caps-advance` dispatcher in v2.1 makes this small. Highest UX win remaining.
+2. **Hot reload on edit (v2.2-F2)** — file watcher already fires; current UX is "restart pi" which is painful. Press `r` in overlay to reload, distinct watcher messages for `added`/`modified`/`deleted`.
+3. **State persistence completeness (v2.2-F1)** — sort mode, expanded folders, cursor position should all survive `/caps` close-reopen. Tens of small persistence holes — fix together.
 
-Profiles (v2.3-F1) is the most exciting feature but ships in v2.3 after the floor is solid. Don't skip the floor.
+Defer to v2.3+: budgets, tags, conditions, freeze mode, includes, auto-context.

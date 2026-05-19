@@ -40,13 +40,36 @@ _Avoid_: loading, sending, feeding
 The estimated token cost of all currently enabled **CAPS Files**, shown to help the user make enable/disable decisions consciously.
 _Avoid_: token count, token usage
 
+**Subdir CAPS**:
+**CAPS Files** discovered in subdirectories of the project root when a prompt or tool call references that subdir with a path (e.g., `docs/X`). Auto-loaded with `enabled: true`, but **toggleable** like a **Root CAPS File**, and **State** persists.
+_Avoid_: auto-loaded files, deep caps, nested caps
+
+**Root CAPS**:
+**CAPS Files** at the project root (`STATUS.md`) or inside a **CAPS Folder** at the root (`DECISIONS/X.md`). Distinguished from **Subdir CAPS** by being known at session start without prompt-driven discovery.
+_Avoid_: top-level caps, primary caps
+
+**Config File**:
+`.pi/caps-config.json` (project-scoped) or `~/.pi/caps-config.json` (user-scoped). Holds the **Skip List**, regex patterns for **CAPS File** matching, and defensive limits (`maxFileSizeBytes`, `maxRecursionDepth`, `maxSubdirFiles`). Project overrides global overrides built-in defaults.
+_Avoid_: settings file, options file, preferences
+
+**Skip List**:
+Set of filenames the discoverer refuses to treat as **CAPS Files**, even if they match the **CAPS File** regex. Defaults to noise (`LICENSE`, `README.md`, `CHANGELOG.md`, etc.). Overridable per project via `/caps-advance skip` or the **Config File**.
+_Avoid_: ignore list, blacklist, exclusion list
+
+**Doctor**:
+A diagnostic command (`/caps-doctor`) that reports cwd, **State** file location and validity, watcher count, last **Injection** size, every entry in the project directory with classification (included vs skipped + reason), and which **Config File** overrides are active. The primary "why isn't this loading?" tool.
+_Avoid_: debug, diagnostics
+
 ## Relationships
 
 - A **CAPS Folder** contains one or more **CAPS Files**
 - A **CAPS File** belongs to either **Project CAPS** or **Global CAPS**, never both
 - **Global CAPS** files are always loaded alongside **Project CAPS** files in every session
-- **State** is per-project for **Project CAPS** and per-user (`~/.pi/`) for **Global CAPS**
+- **Root CAPS** are known at session start; **Subdir CAPS** are discovered during a session via prompt-driven path references
+- **State** is per-project for **Project CAPS** + **Subdir CAPS**, per-user (`~/.pi/`) for **Global CAPS**
 - **Injection** happens once per agent run, using the **State** at that moment
+- **Skip List** decisions are filter-level — affected files are not discovered, not just disabled
+- **Config File** lookup order: built-in defaults < global < project; project always wins
 - CLAUDE.md is outside this system — always-on, not a **CAPS File**, never toggled
 
 ## What this is NOT

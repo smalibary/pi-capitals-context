@@ -2,10 +2,21 @@
 
 pi extension for personal, toggleable AI context management. See `CONTEXT.md` for canonical terms and domain boundaries.
 
-**In scope:** file discovery, toggle state, system prompt injection, /caps overlay UI, token estimation, file watching.
+**In scope:** file discovery, toggle state, system prompt injection, /caps overlay UI, token estimation, file watching, config-file overrides, diagnostics.
 **Out of scope:** team sharing, semantic retrieval, doc editing, replacing CLAUDE.md.
 
-Use terms from `CONTEXT.md` exactly — CAPS File, CAPS Folder, Toggle, State, Injection, Session, Global CAPS, Project CAPS.
+Use terms from `CONTEXT.md` exactly — CAPS File, CAPS Folder, Toggle, State, Injection, Session, Global CAPS, Project CAPS, Root CAPS, Subdir CAPS, Config File, Skip List, Doctor.
+
+# Commands (current surface as of v2.1)
+
+- `/caps` — toggle overlay (daily driver)
+- `/caps-advance skip <list|add|remove|reset>` — power-user skip list editor; future subcommands (profiles, budgets, tags) land in v2.3
+- `/caps-prompt [--copy] [--diff]` — show exact injected text + per-file stats
+- `/caps-doctor [--verbose]` — diagnose discovery, state, watchers, config sources
+
+# Local vs npm
+
+`src/env.ts` auto-detects via `import.meta.url`. Local dev shows `[CAPS Context — LOCAL DEV]`. npm install shows `[CAPS Context]`. Never hardcode either label — use the `CONTEXT_LABEL` export.
 
 # Communication Style
 
@@ -30,14 +41,14 @@ CI gates publish on `npm test`. Tests fail -> publish blocked. Never bypass.
 
 Rules:
 - New feature -> tests before merge. Acceptance criteria in `ROADMAP.md` per version.
-- Bug fix -> existing tripwire test fails first (proves the bug), then flip expectation (proves the fix). Don't write new test alongside — update the tripwire.
+- Bug fix -> if an existing tripwire test covers the bug, flip its expectation (the failure proves you fixed it). Otherwise write a fresh failing test first, then the fix.
 - Refactor -> run tests after every module split. Behavior must not change.
 - Run `npm test` before declaring task done. Not optional.
 
-Tripwire tests (marked `currently matches...` / `currently treats...` in test files) document known bugs. Update them when v2.1-F3 ships fixes:
-- `caps-file-re.test.ts` — LICENSE.md / CHANGELOG.md inclusion
-- `extract-subdirs.test.ts` — prose loose-match (lines about `lib`, `docs`)
+Current state (v2.1):
+- 98 tests across 10 files; coverage ~30% lines, ~88% branches on covered code
+- All v2.0 audit tripwires flipped — loose-match fix, LICENSE/CHANGELOG/README in default skip list
+- Tested: `discovery`, `config`, `config-writer`, `state`, `injection`, `diff`, `doctor`, regex defaults
+- Still untested: `CapsSelector` overlay UI (528 lines — needs fake-terminal harness), `before_agent_start` orchestrator handler, file watcher. Cover these as opportunities arise; not gated on a version.
 
-Untested today (deferred to v2.1-F2 after module split): `CapsSelector` overlay, `before_agent_start` handler, watcher logic.
-
-Coverage floor climbs per version: F1 baseline ~10%, target 60% by end of v2.1.
+Target 60% line coverage by end of v2.2 (overlay coverage is the gap).
