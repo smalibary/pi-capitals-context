@@ -34,10 +34,12 @@ import {
 	loadGlobalState,
 	saveGlobalState,
 } from "../src/state.js";
-import { buildDisplayText, formatSystemPromptExtra } from "../src/injection.js";
+import { buildDisplayText, formatSystemPromptExtra, buildPromptPreview } from "../src/injection.js";
 import { CapsSelector } from "../src/overlay.js";
 import { loadConfig, defaultConfig, type CapsConfig } from "../src/config.js";
 import { addSkipFile, removeSkipFile, resetSkipFiles, listSkipFiles } from "../src/config-writer.js";
+import { copyToClipboard } from "../src/clipboard.js";
+import { simpleLineDiff } from "../src/diff.js";
 
 export default function capitalsContextExtension(pi: ExtensionAPI) {
 	let rootFiles: FileEntry[] = [];
@@ -49,6 +51,8 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 	let startupShown = false;
 	let watchers: fs.FSWatcher[] = [];
 	let changedPaths = new Set<string>();
+	let lastInjection = "";
+	let diffPreview = "";
 	const debounceMap = new Map<string, ReturnType<typeof setTimeout>>();
 
 	const watchFile = (f: FileEntry, fp: string) => {
@@ -310,8 +314,73 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 
 		const enabled = [...rootFiles.filter(f => f.enabled), ...subdirFiles.filter(f => f.enabled), ...globalFiles.filter(f => f.enabled)];
 		const extra = formatSystemPromptExtra(enabled);
+		lastInjection = extra;
 		if (!extra) return;
 
 		return { systemPrompt: event.systemPrompt + extra };
+	});
+
+	pi.registerMessageRenderer("caps-prompt", (_message, _options, theme) => {
+		const enabled = [
+			...rootFiles.filter(f => f.enabled),
+			...subdirFiles.filter(f => f.enabled),
+			...globalFiles.filter(f => f.enabled),
+		];
+		return new Text(buildPromptPreview(enabled, theme), 0, 0);
+	});
+
+	pi.registerMessageRenderer("caps-prompt-diff", (_message, _options, theme) => {
+		const header = theme.fg("accent", "[CAPS Injection Diff vs previous turn]");
+		return new Text(header + "\n" + diffPreview, 0, 0);
+	});
+
+	const handlePrompt = async (args: string, ctx: any): Promise<void> => {
+		const tokens = args.trim().split(/\s+/).filter(Boolean);
+		const wantCopy = tokens.includes("--copy");
+		const wantDiff = tokens.includes("--diff");
+		const wantHelp = tokens.includes("help") || tokens.includes("--help");
+
+		if (wantHelp) {
+			ctx.ui.notify(
+				"/caps-prompt — show the exact text injected into the system prompt\n" +
+				"  /caps-prompt          — print injection preview + per-file stats\n" +
+				"  /caps-prompt --copy   — also copy injection text to clipboard\n" +
+				"  /caps-prompt --diff   — show line-diff vs previous turn's injection",
+				"info",
+			);
+			return;
+		}
+
+		const enabled = [
+			...rootFiles.filter(f => f.enabled),
+			...subdirFiles.filter(f => f.enabled),
+			...globalFiles.filter(f => f.enabled),
+		];
+		const currentInjection = formatSystemPromptExtra(enabled);
+
+		if (wantCopy) {
+			const r = await copyToClipboard(currentInjection);
+			ctx.ui.notify(
+				r.ok ? "Copied injection text to clipboard." : `Clipboard failed: ${r.reason}`,
+				r.ok ? "info" : "warn",
+			);
+		}
+
+		if (wantDiff) {
+			if (!lastInjection) {
+				ctx.ui.notify("No previous turn yet — send a message first, then /caps-prompt --diff.", "info");
+				return;
+			}
+			diffPreview = simpleLineDiff(lastInjection, currentInjection);
+			pi.sendMessage({ customType: "caps-prompt-diff", content: "diff", display: true });
+			return;
+		}
+
+		pi.sendMessage({ customType: "caps-prompt", content: "preview", display: true });
+	};
+
+	pi.registerCommand("caps-prompt", {
+		description: "Show the exact text injected into the system prompt",
+		handler: async (args, ctx) => { await handlePrompt(args, ctx); },
 	});
 }
