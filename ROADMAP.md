@@ -25,6 +25,8 @@ See `CHANGELOG.md` for the v2.1.0 release notes.
 
 Run through this checklist before tagging any v2.x.0 (and most x.y.z patches). Items in **bold** are blocking.
 
+> Per-file update guidance, doc-rot checklist, screenshot conventions, and the criteria for splitting into `docs/` live in `MAINTAINING.md`. The procedure below is the *what*; `MAINTAINING.md` is the *how*.
+
 ### 1. Code green
 - [ ] **`npm test` passes locally** (all current tests; no skips)
 - [ ] **`npm run coverage` reviewed** — coverage didn't regress; if a major area is still 0%, decide: cover now, or note as deferred in CHANGELOG "Internal" section
@@ -36,7 +38,7 @@ Run through this checklist before tagging any v2.x.0 (and most x.y.z patches). I
 - [ ] **`CONTEXT.md`** — new canonical terms added if the version introduces domain concepts. New Relationships entries if behavior couples differently. _Avoid_ lines kept current.
 - [ ] **`CLAUDE.md`** — Commands section updated, Testing section refreshed (test count, what's still untested), command surface list current. Remove stale tripwire reminders for bugs that have been fixed.
 - [ ] **`ROADMAP.md`** — version Status table updated (✅ Shipped + date), the section header for the just-shipped version marked, "Three Bets For Next Sprint" rewritten for the next milestone, anything killed during the version moved to "Killed Ideas".
-- [ ] **Docs review** — re-read README end-to-end. If it crosses ~400 lines or splits naturally into "user guide" vs "reference", create `docs/` and split. Do this lazily — only when natural, not preemptively.
+- [ ] **Docs review** — re-read README end-to-end. Check the doc-rot list in `MAINTAINING.md`. If `MAINTAINING.md`'s triggers fire (README > 400 lines, etc.), create `docs/` per its structure spec.
 
 ### 3. Version bump
 - [ ] **`package.json`** — bump `version` (semver: bug fixes = patch, new features = minor, breaking = major)
