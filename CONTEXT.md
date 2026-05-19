@@ -64,6 +64,14 @@ _Avoid_: debug, diagnostics
 A named snapshot of **Toggle** decisions for a project, persisted to `.pi/caps-profiles.json`. Loading a **Profile** restores the captured toggles and overwrites the current **State**. Project-scoped only — **Global CAPS** toggles are not part of a **Profile**.
 _Avoid_: preset, mode, layout
 
+**Overlay**:
+The canonical UI primitive for this project — a modal, keyboard-driven panel that lists choices, accepts arrow-key navigation, and exits on `Esc`. Every user-facing action is delivered through an **Overlay** (file toggling, profile CRUD, skip list editing, etc.). Typed slash-command arguments are a scripting fallback, never the primary path. New behaviour ships as an **Overlay** by default.
+_Avoid_: modal, popup, dialog, panel
+
+**Settings Hub**:
+A meta-**Overlay** opened by `/caps-settings` listing the project's non-daily-driver actions (skip list, prompt preview, diagnose / **Doctor**, configuration). Each row opens its own dedicated **Overlay**. The hub keeps the slash-command namespace small while preserving discoverability.
+_Avoid_: menu, options, config screen
+
 ## Relationships
 
 - A **CAPS Folder** contains one or more **CAPS Files**
@@ -75,6 +83,8 @@ _Avoid_: preset, mode, layout
 - **Skip List** decisions are filter-level — affected files are not discovered, not just disabled
 - **Config File** lookup order: built-in defaults < global < project; project always wins
 - A **Profile** captures **State** at a moment in time and is replayed on load; **Profile** storage is separate from **State** storage
+- Every user action is initiated through an **Overlay**; typed args route through the same handlers as scripting fallback
+- The **Settings Hub** is the single entry point for non-daily-driver **Overlay** flows; daily drivers (`/caps`, `/caps-profile`) stay top-level
 - CLAUDE.md is outside this system — always-on, not a **CAPS File**, never toggled
 
 ## What this is NOT
@@ -95,6 +105,12 @@ _Avoid_: preset, mode, layout
 
 > **Dev:** "Why can't I just put everything in CLAUDE.md?"
 > **Domain expert:** "CLAUDE.md is always-on — every token, every run. CAPS files let you control the **Token Budget** and switch context based on what you're working on right now."
+
+## Design philosophy
+
+**Overlay-first.** Every action this project ships is an **Overlay** before it is a typed command. The reasoning: the user shouldn't need to memorise subcommand chains, flag names, or argument orders. A list with arrow-key navigation and one-letter actions (`d` delete, `r` rename, `e` edit) is faster to learn and recall than `/cmd verb noun --flag <name>`. Typed args remain available for scripting, but are not the discovery path.
+
+This rule supersedes any earlier dispatcher-style design (e.g., the original `/caps-advance <subcommand>` pattern). When deciding how to expose a new feature, ask: *what overlay does this open?* If the answer is "none, it's just a typed command", you're probably picking the wrong shape.
 
 ## Flagged ambiguities
 
