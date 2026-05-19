@@ -40,6 +40,10 @@ import { loadConfig, defaultConfig, type CapsConfig } from "../src/config.js";
 import { addSkipFile, removeSkipFile, resetSkipFiles, listSkipFiles } from "../src/config-writer.js";
 import { copyToClipboard } from "../src/clipboard.js";
 import { simpleLineDiff } from "../src/diff.js";
+import { inspectDirectory, buildDoctorReport } from "../src/doctor.js";
+import { PROJECT_CONFIG_NAME, GLOBAL_CONFIG_PATH } from "../src/config.js";
+import { STATE_FILE } from "../src/state.js";
+import * as os from "node:os";
 
 export default function capitalsContextExtension(pi: ExtensionAPI) {
 	let rootFiles: FileEntry[] = [];
@@ -53,6 +57,7 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 	let changedPaths = new Set<string>();
 	let lastInjection = "";
 	let diffPreview = "";
+	let doctorInputs: import("../src/doctor.js").DoctorInputs | null = null;
 	const debounceMap = new Map<string, ReturnType<typeof setTimeout>>();
 
 	const watchFile = (f: FileEntry, fp: string) => {
@@ -155,9 +160,13 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 		globalFiles = globalEntries;
 		subdirFiles = [];
 
-		if ((rootFiles.length > 0 || globalFiles.length > 0) && !startupShown) {
+		if (!startupShown) {
 			startupShown = true;
-			pi.sendMessage({ customType: "caps-context", content: "CAPS context loaded", display: true });
+			if (rootFiles.length > 0 || globalFiles.length > 0) {
+				pi.sendMessage({ customType: "caps-context", content: "CAPS context loaded", display: true });
+			} else {
+				pi.sendMessage({ customType: "caps-empty", content: "no caps files", display: true });
+			}
 		}
 	});
 
@@ -382,5 +391,61 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 	pi.registerCommand("caps-prompt", {
 		description: "Show the exact text injected into the system prompt",
 		handler: async (args, ctx) => { await handlePrompt(args, ctx); },
+	});
+
+	pi.registerMessageRenderer("caps-empty", (_message, _options, theme) => {
+		return new Text(
+			theme.fg("dim", "[CAPS] No CAPS files found. Create STATUS.md or any ALL_CAPS.md file. /caps-doctor for diagnostics."),
+			0, 0,
+		);
+	});
+
+	pi.registerMessageRenderer("caps-doctor", (_message, _options, theme) => {
+		if (!doctorInputs) return new Text(theme.fg("dim", "[CAPS Doctor] no report — run /caps-doctor"), 0, 0);
+		return new Text(buildDoctorReport(doctorInputs, theme), 0, 0);
+	});
+
+	const handleDoctor = async (args: string, ctx: any): Promise<void> => {
+		const tokens = args.trim().split(/\s+/).filter(Boolean);
+		const wantVerbose = tokens.includes("--verbose") || tokens.includes("-v");
+		const wantHelp = tokens.includes("help") || tokens.includes("--help");
+
+		if (wantHelp) {
+			ctx.ui.notify(
+				"/caps-doctor — diagnose CAPS loading\n" +
+				"  /caps-doctor             — show status, loaded files, skip reasons, config sources\n" +
+				"  /caps-doctor --verbose   — also list every entry in cwd with classification",
+				"info",
+			);
+			return;
+		}
+
+		const projectConfigPath = path.join(cwd, ".pi", PROJECT_CONFIG_NAME);
+		const stateFilePath = path.join(cwd, ".pi", STATE_FILE);
+		const inspection = await inspectDirectory(cwd, config);
+
+		doctorInputs = {
+			cwd,
+			globalCapsDir: path.join(os.homedir(), ".pi", "CAPS"),
+			stateFilePath,
+			stateFileExists: fs.existsSync(stateFilePath),
+			projectConfigPath,
+			projectConfigExists: fs.existsSync(projectConfigPath),
+			globalConfigPath: GLOBAL_CONFIG_PATH,
+			globalConfigExists: fs.existsSync(GLOBAL_CONFIG_PATH),
+			rootFiles,
+			subdirFiles,
+			globalFiles,
+			watcherCount: watchers.length,
+			lastInjection,
+			inspection,
+			verbose: wantVerbose,
+		};
+		pi.sendMessage({ customType: "caps-doctor", content: "report", display: true });
+	};
+
+	pi.registerCommand("caps-doctor", {
+		description: "Diagnose CAPS discovery, state, config sources",
+		handler: async (args, ctx) => { await handleDoctor(args, ctx); },
 	});
 }
