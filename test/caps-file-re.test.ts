@@ -1,62 +1,89 @@
 import { describe, it, expect } from "vitest";
-import { CAPS_FILE_RE, CAPS_DIR_RE, SKIP_FILES, SKIP_DIRS } from "../src/discovery.js";
+import {
+	defaultConfig,
+	DEFAULT_SKIP_FILES,
+	DEFAULT_SKIP_DIRS,
+} from "../src/config.js";
 
-describe("CAPS_FILE_RE", () => {
+const config = defaultConfig();
+const { capsFileRe, capsDirRe, skipFiles, skipDirs } = config;
+
+describe("default CAPS file regex", () => {
 	it("matches ALL_CAPS .md files", () => {
-		expect(CAPS_FILE_RE.test("STATUS.md")).toBe(true);
-		expect(CAPS_FILE_RE.test("ARCHITECTURE.md")).toBe(true);
-		expect(CAPS_FILE_RE.test("API_DESIGN.md")).toBe(true);
-		expect(CAPS_FILE_RE.test("V2_PLAN.md")).toBe(true);
-		expect(CAPS_FILE_RE.test("A.md")).toBe(true);
+		expect(capsFileRe.test("STATUS.md")).toBe(true);
+		expect(capsFileRe.test("ARCHITECTURE.md")).toBe(true);
+		expect(capsFileRe.test("API_DESIGN.md")).toBe(true);
+		expect(capsFileRe.test("V2_PLAN.md")).toBe(true);
+		expect(capsFileRe.test("A.md")).toBe(true);
 	});
 
 	it("rejects lowercase and mixed-case names", () => {
-		expect(CAPS_FILE_RE.test("status.md")).toBe(false);
-		expect(CAPS_FILE_RE.test("Status.md")).toBe(false);
-		expect(CAPS_FILE_RE.test("STATUSx.md")).toBe(false);
-		expect(CAPS_FILE_RE.test("readme.md")).toBe(false);
+		expect(capsFileRe.test("status.md")).toBe(false);
+		expect(capsFileRe.test("Status.md")).toBe(false);
+		expect(capsFileRe.test("STATUSx.md")).toBe(false);
+		expect(capsFileRe.test("readme.md")).toBe(false);
 	});
 
 	it("rejects non-.md extensions", () => {
-		expect(CAPS_FILE_RE.test("STATUS.txt")).toBe(false);
-		expect(CAPS_FILE_RE.test("STATUS")).toBe(false);
-		expect(CAPS_FILE_RE.test("STATUS.MD")).toBe(false);
+		expect(capsFileRe.test("STATUS.txt")).toBe(false);
+		expect(capsFileRe.test("STATUS")).toBe(false);
+		expect(capsFileRe.test("STATUS.MD")).toBe(false);
 	});
 
 	it("rejects names starting with non-letter", () => {
-		expect(CAPS_FILE_RE.test("_STATUS.md")).toBe(false);
-		expect(CAPS_FILE_RE.test("1STATUS.md")).toBe(false);
+		expect(capsFileRe.test("_STATUS.md")).toBe(false);
+		expect(capsFileRe.test("1STATUS.md")).toBe(false);
 	});
 
-	// Known bug — documents current behavior; v2.1-F3 will move LICENSE/README/CHANGELOG into SKIP_FILES.
-	it("currently matches LICENSE.md, CHANGELOG.md (will be excluded via SKIP_FILES in v2.1-F3)", () => {
-		expect(CAPS_FILE_RE.test("LICENSE.md")).toBe(true);
-		expect(CAPS_FILE_RE.test("CHANGELOG.md")).toBe(true);
+	it("regex still structurally matches LICENSE.md and CHANGELOG.md — filtering happens via SKIP_FILES", () => {
+		expect(capsFileRe.test("LICENSE.md")).toBe(true);
+		expect(capsFileRe.test("CHANGELOG.md")).toBe(true);
 	});
 });
 
-describe("CAPS_DIR_RE", () => {
+describe("default CAPS dir regex", () => {
 	it("matches ALL_CAPS directory names", () => {
-		expect(CAPS_DIR_RE.test("ARCHITECTURE")).toBe(true);
-		expect(CAPS_DIR_RE.test("API_DESIGN")).toBe(true);
-		expect(CAPS_DIR_RE.test("V2_NOTES")).toBe(true);
+		expect(capsDirRe.test("ARCHITECTURE")).toBe(true);
+		expect(capsDirRe.test("API_DESIGN")).toBe(true);
+		expect(capsDirRe.test("V2_NOTES")).toBe(true);
 	});
 
 	it("rejects mixed-case or lowercase", () => {
-		expect(CAPS_DIR_RE.test("Architecture")).toBe(false);
-		expect(CAPS_DIR_RE.test("api")).toBe(false);
+		expect(capsDirRe.test("Architecture")).toBe(false);
+		expect(capsDirRe.test("api")).toBe(false);
 	});
 });
 
-describe("SKIP_FILES + SKIP_DIRS", () => {
-	it("currently skips AGENTS.md and CLAUDE.md", () => {
-		expect(SKIP_FILES.has("AGENTS.md")).toBe(true);
-		expect(SKIP_FILES.has("CLAUDE.md")).toBe(true);
+describe("default SKIP_FILES + SKIP_DIRS", () => {
+	it("skips AGENTS.md and CLAUDE.md", () => {
+		expect(skipFiles.has("AGENTS.md")).toBe(true);
+		expect(skipFiles.has("CLAUDE.md")).toBe(true);
 	});
 
-	it("currently skips AGENTS, CLAUDE, NODE_MODULES dirs", () => {
-		expect(SKIP_DIRS.has("AGENTS")).toBe(true);
-		expect(SKIP_DIRS.has("CLAUDE")).toBe(true);
-		expect(SKIP_DIRS.has("NODE_MODULES")).toBe(true);
+	it("skips repo-noise files: LICENSE, README, CHANGELOG, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY", () => {
+		expect(skipFiles.has("LICENSE")).toBe(true);
+		expect(skipFiles.has("LICENSE.md")).toBe(true);
+		expect(skipFiles.has("README.md")).toBe(true);
+		expect(skipFiles.has("CHANGELOG.md")).toBe(true);
+		expect(skipFiles.has("CONTRIBUTING.md")).toBe(true);
+		expect(skipFiles.has("CODE_OF_CONDUCT.md")).toBe(true);
+		expect(skipFiles.has("SECURITY.md")).toBe(true);
+	});
+
+	it("skips AGENTS, CLAUDE, NODE_MODULES dirs", () => {
+		expect(skipDirs.has("AGENTS")).toBe(true);
+		expect(skipDirs.has("CLAUDE")).toBe(true);
+		expect(skipDirs.has("NODE_MODULES")).toBe(true);
+	});
+
+	it("skips noise dirs: node_modules, .git, .pi", () => {
+		expect(skipDirs.has("node_modules")).toBe(true);
+		expect(skipDirs.has(".git")).toBe(true);
+		expect(skipDirs.has(".pi")).toBe(true);
+	});
+
+	it("exposes raw default arrays for inspection", () => {
+		expect(DEFAULT_SKIP_FILES).toContain("LICENSE.md");
+		expect(DEFAULT_SKIP_DIRS).toContain(".git");
 	});
 });

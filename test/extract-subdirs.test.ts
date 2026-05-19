@@ -40,14 +40,19 @@ describe("extractSubdirs", () => {
 		expect(dirs.size).toBe(0);
 	});
 
-	// Documents the loose-match bug. v2.1-F3 will tighten this — when it does, update these tests.
-	it("currently matches dir names mentioned in plain prose (loose-match bug)", async () => {
+	// v2.1-F3 fix: prose mentions no longer auto-load. Explicit path refs required.
+	it("does not match dir names mentioned in plain prose", async () => {
 		const dirs = await extractSubdirs("check the public library at the corner", cwd);
-		expect(dirs.has(path.join(cwd, "lib"))).toBe(true); // "library" contains "lib"
+		expect(dirs.has(path.join(cwd, "lib"))).toBe(false);
 	});
 
-	it("currently treats prose mention of 'docs' as a match (loose-match bug)", async () => {
+	it("does not treat prose mention of 'docs' as a match", async () => {
 		const dirs = await extractSubdirs("the docs are unclear", cwd);
+		expect(dirs.has(path.join(cwd, "docs"))).toBe(false);
+	});
+
+	it("still loads when dir is followed by slash + content (path reference)", async () => {
+		const dirs = await extractSubdirs("see docs/README for setup", cwd);
 		expect(dirs.has(path.join(cwd, "docs"))).toBe(true);
 	});
 
