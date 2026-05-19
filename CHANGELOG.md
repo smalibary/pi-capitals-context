@@ -4,6 +4,19 @@ All notable changes to `pi-capitals-context`.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `MAINTAINING.md` — single-file guide covering doc inventory, when to split
+  into `docs/`, per-file update rules, screenshot conventions, diagram policy,
+  doc-rot checklist. Linked from `ROADMAP.md` Release Procedure.
+
+### Changed
+- Default `skipFiles` now also includes `MAINTAINING.md` and `ROADMAP.md`
+  (planning/maintenance docs, like LICENSE/CHANGELOG, should not auto-inject
+  into CAPS context). Override via `/caps-advance skip remove <name>` if you
+  want either as context.
+
 ## [2.1.0] — 2026-05-20
 
 ### Added

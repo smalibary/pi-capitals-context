@@ -70,6 +70,11 @@ describe("default SKIP_FILES + SKIP_DIRS", () => {
 		expect(skipFiles.has("SECURITY.md")).toBe(true);
 	});
 
+	it("skips planning/maintenance docs: MAINTAINING, ROADMAP", () => {
+		expect(skipFiles.has("MAINTAINING.md")).toBe(true);
+		expect(skipFiles.has("ROADMAP.md")).toBe(true);
+	});
+
 	it("skips AGENTS, CLAUDE, NODE_MODULES dirs", () => {
 		expect(skipDirs.has("AGENTS")).toBe(true);
 		expect(skipDirs.has("CLAUDE")).toBe(true);

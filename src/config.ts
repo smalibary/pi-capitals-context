@@ -23,6 +23,8 @@ export const DEFAULT_SKIP_FILES = [
 	"CONTRIBUTING.md",
 	"CODE_OF_CONDUCT.md",
 	"SECURITY.md",
+	"MAINTAINING.md",
+	"ROADMAP.md",
 ];
 
 export const DEFAULT_SKIP_DIRS = [
