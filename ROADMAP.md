@@ -245,6 +245,19 @@ Goal: ship the power-user route. Beginners untouched.
 
 > All features below live behind `/caps-advance`. The basic `/caps` overlay shows a single hint line at bottom: `/caps-advance for profiles, budgets, tags`.
 
+## v2.3-F0 — `/caps-advance` skip CRUD [SHIPPED EARLY in v2.1-F3-10]
+
+Skip-list editing landed early to address UX gap: default skip filters out files some projects need (LICENSE/README in research repos).
+
+Subcommands shipped in v2.1:
+- `/caps-advance skip list`
+- `/caps-advance skip add <name>`
+- `/caps-advance skip remove <name>`
+- `/caps-advance skip reset`
+- `/caps-advance help`
+
+Rest of `/caps-advance` (profiles, budgets, tags, conditions, freeze) lands in v2.3 as additional subcommands. Architecture: subcommand dispatcher already in place.
+
 ## v2.3-F1 — Profiles [A1+A2]
 
 Goal: named context combos. The killer feature.

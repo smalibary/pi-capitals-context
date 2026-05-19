@@ -37,6 +37,7 @@ import {
 import { buildDisplayText, formatSystemPromptExtra } from "../src/injection.js";
 import { CapsSelector } from "../src/overlay.js";
 import { loadConfig, defaultConfig, type CapsConfig } from "../src/config.js";
+import { addSkipFile, removeSkipFile, resetSkipFiles, listSkipFiles } from "../src/config-writer.js";
 
 export default function capitalsContextExtension(pi: ExtensionAPI) {
 	let rootFiles: FileEntry[] = [];
@@ -189,6 +190,78 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 	pi.registerCommand("caps", {
 		description: "Toggle CAPS context files",
 		handler: async (_args, ctx) => { await openSelector(ctx); },
+	});
+
+	const handleAdvance = async (args: string, ctx: any): Promise<void> => {
+		const tokens = args.trim().split(/\s+/).filter(Boolean);
+		const sub = tokens[0];
+
+		if (!sub || sub === "help") {
+			ctx.ui.notify(
+				"/caps-advance — power-user config\n" +
+				"  skip list           — show current skip list\n" +
+				"  skip add <name>     — exclude a file from CAPS context\n" +
+				"  skip remove <name>  — re-include a previously-skipped file\n" +
+				"  skip reset          — restore default skip list\n" +
+				"Changes take effect on pi restart.",
+				"info",
+			);
+			return;
+		}
+
+		if (sub !== "skip") {
+			ctx.ui.notify(`Unknown subcommand: ${sub}. Try /caps-advance help.`, "warn");
+			return;
+		}
+
+		const action = tokens[1];
+		const value = tokens.slice(2).join(" ");
+
+		if (action === "list" || !action) {
+			const { list, source } = listSkipFiles(cwd);
+			ctx.ui.notify(`skip list (${source}):\n  ${list.join("\n  ")}`, "info");
+			return;
+		}
+
+		if (action === "reset") {
+			const { list } = resetSkipFiles(cwd);
+			ctx.ui.notify(`skip list reset to defaults (${list.length} entries). Restart pi to apply.`, "info");
+			return;
+		}
+
+		if (!value) {
+			ctx.ui.notify(`Usage: /caps-advance skip ${action} <name>`, "warn");
+			return;
+		}
+
+		if (action === "add") {
+			const { added, list } = addSkipFile(cwd, value);
+			ctx.ui.notify(
+				added
+					? `Added "${value}" to skip list (now ${list.length} entries). Restart pi to apply.`
+					: `"${value}" already in skip list.`,
+				"info",
+			);
+			return;
+		}
+
+		if (action === "remove") {
+			const { removed, list } = removeSkipFile(cwd, value);
+			ctx.ui.notify(
+				removed
+					? `Removed "${value}" from skip list (now ${list.length} entries). Restart pi to apply.`
+					: `"${value}" not in skip list.`,
+				"info",
+			);
+			return;
+		}
+
+		ctx.ui.notify(`Unknown action: ${action}. Try /caps-advance help.`, "warn");
+	};
+
+	pi.registerCommand("caps-advance", {
+		description: "Power-user config — skip list, profiles (v2.3+), budgets (v2.3+)",
+		handler: async (args, ctx) => { await handleAdvance(args, ctx); },
 	});
 
 	pi.on("before_agent_start", async (event, ctx) => {
