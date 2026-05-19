@@ -23,11 +23,28 @@
     "README.md",
     "LICENSE"
   ],
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ci": "vitest run --reporter=verbose",
+    "coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": "*",
     "@mariozechner/pi-ai": "*",
     "@mariozechner/pi-tui": "*",
     "@sinclair/typebox": "*"
+  },
+  "devDependencies": {
+    "@mariozechner/pi-coding-agent": "^0.73.1",
+    "@mariozechner/pi-ai": "^0.73.1",
+    "@mariozechner/pi-tui": "^0.73.1",
+    "@sinclair/typebox": "^0.34.49",
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^3.2.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.2.0"
   },
   "pi": {
     "extensions": ["./extensions"],

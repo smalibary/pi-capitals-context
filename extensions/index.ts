@@ -20,16 +20,16 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { matchesKey, Key, truncateToWidth, Text } from "@mariozechner/pi-tui";
 import type { Theme } from "@mariozechner/pi-coding-agent";
 
-const CAPS_FILE_RE = /^[A-Z][A-Z0-9_]*\.md$/;
-const CAPS_DIR_RE = /^[A-Z][A-Z0-9_]*$/;
-const SKIP_FILES = new Set(["AGENTS.md", "CLAUDE.md"]);
-const SKIP_DIRS = new Set(["AGENTS", "CLAUDE", "NODE_MODULES"]);
-const TEXT_EXTENSIONS = new Set([".md", ".txt", ".yaml", ".yml", ".json", ".toml"]);
-const STATE_FILE = "caps-context-state.json";
+export const CAPS_FILE_RE = /^[A-Z][A-Z0-9_]*\.md$/;
+export const CAPS_DIR_RE = /^[A-Z][A-Z0-9_]*$/;
+export const SKIP_FILES = new Set(["AGENTS.md", "CLAUDE.md"]);
+export const SKIP_DIRS = new Set(["AGENTS", "CLAUDE", "NODE_MODULES"]);
+export const TEXT_EXTENSIONS = new Set([".md", ".txt", ".yaml", ".yml", ".json", ".toml"]);
+export const STATE_FILE = "caps-context-state.json";
 const GLOBAL_CAPS_DIR = path.join(os.homedir(), ".pi", "CAPS");
 const GLOBAL_STATE_FILE = path.join(os.homedir(), ".pi", "caps-global-state.json");
 
-interface FileEntry {
+export interface FileEntry {
 	relativePath: string;
 	content: string;
 	enabled: boolean;
@@ -40,7 +40,7 @@ interface FileEntry {
 
 // ── File discovery (async) ───────────────────────────────────────
 
-async function findCapsFiles(dir: string): Promise<string[]> {
+export async function findCapsFiles(dir: string): Promise<string[]> {
 	try {
 		const entries = await fsp.readdir(dir, { withFileTypes: true });
 		return entries
@@ -82,7 +82,7 @@ async function readFileContent(fp: string, cwd: string): Promise<{ relativePath:
 	} catch { return null; }
 }
 
-async function extractSubdirs(text: string, cwd: string): Promise<Set<string>> {
+export async function extractSubdirs(text: string, cwd: string): Promise<Set<string>> {
 	const dirs = new Set<string>();
 	let realDirs: string[] = [];
 	try {
@@ -103,7 +103,7 @@ async function extractSubdirs(text: string, cwd: string): Promise<Set<string>> {
 
 // ── State persistence (resilient, atomic writes) ─────────────────
 
-function validateState(raw: unknown): Record<string, boolean> {
+export function validateState(raw: unknown): Record<string, boolean> {
 	if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return {};
 	const result: Record<string, boolean> = {};
 	for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
@@ -112,12 +112,12 @@ function validateState(raw: unknown): Record<string, boolean> {
 	return result;
 }
 
-function loadState(cwd: string): Record<string, boolean> {
+export function loadState(cwd: string): Record<string, boolean> {
 	try { return validateState(JSON.parse(fs.readFileSync(path.join(cwd, ".pi", STATE_FILE), "utf-8"))); }
 	catch { return {}; }
 }
 
-function saveState(cwd: string, files: FileEntry[]) {
+export function saveState(cwd: string, files: FileEntry[]) {
 	const dir = path.join(cwd, ".pi");
 	try { fs.mkdirSync(dir, { recursive: true }); } catch {}
 	const state: Record<string, boolean> = {};
@@ -143,7 +143,7 @@ function saveGlobalState(files: FileEntry[]) {
 
 // ── Token estimate (word-based) ──────────────────────────────────
 
-function estimateTokens(text: string): number {
+export function estimateTokens(text: string): number {
 	let tokens = 0;
 	for (const chunk of text.split(/\s+/)) {
 		if (chunk.length === 0) continue;
@@ -152,7 +152,7 @@ function estimateTokens(text: string): number {
 	return tokens;
 }
 
-function formatTokens(n: number): string {
+export function formatTokens(n: number): string {
 	if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
 	return `${n}`;
 }
