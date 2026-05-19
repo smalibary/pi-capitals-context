@@ -1,97 +1,168 @@
 # pi-capitals-context
 
-Auto-discovers `ALL_CAPS.md` files and `ALL_CAPS/` folders in your project and injects them into pi's system prompt.
-
-## What it does
-
-- **Root files**: Scans for `ALL_CAPS.md` files like `STATUS.md`, `WORKFLOW.md`, `DESIGN.md`
-- **Root folders**: Scans for `ALL_CAPS/` folders like `RULES/`, `MEMORY/`, `CONTEXT/` — all `.md` files inside are loaded
-- **Subdirectories**: When you reference a subdirectory, it loads CAPS files from that subdirectory too
-- **Toggle**: Type `/caps` to enable/disable individual files or folders
-- **Persistent**: Your toggle choices survive across sessions
-- **Skips** `AGENTS.md` and `CLAUDE.md` (already loaded natively)
+Auto-discovers `ALL_CAPS` files and folders in your project and injects them into pi's system prompt as context. Toggle individual files, preview content, search, sort — all from a `/caps` overlay.
 
 ## Install
 
 ```bash
 pi install npm:pi-capitals-context
-# or from git:
-pi install git:github.com/smalibary/pi-capitals-context
 ```
 
-## Usage
+## What it loads
 
-Drop any `ALL_CAPS.md` file or `ALL_CAPS/` folder in your project root.
+| Source | Example | Notes |
+|--------|---------|-------|
+| Root CAPS files | `STATUS.md`, `DESIGN.md` | Individually toggleable |
+| Root CAPS folders | `RULES/`, `CONTEXT/` | Each file inside is individually toggleable |
+| Global folder | `~/.pi/CAPS/` | Loaded in every project |
+| Subdirectories | `src/GUIDE.md` | Auto-loaded when you reference that folder |
+
+Skips `AGENTS.md` and `CLAUDE.md` (already loaded natively by pi).
+
+## Supported file types
+
+Inside CAPS folders: `.md`, `.txt`, `.yaml`, `.yml`, `.json`, `.toml`
+
+Root-level CAPS files: `.md` only (e.g. `STATUS.md`, `DESIGN.md`)
+
+## Project structure example
 
 ```
 my-project/
-├── STATUS.md               ← single file, loaded individually
-├── DESIGN.md               ← single file, loaded individually
-├── STYLE.md                ← single file, loaded individually
-├── RULES/                  ← ALL_CAPS folder, ALL .md inside loaded
-│   ├── typescript.md       ← any filename works inside CAPS folder
+├── STATUS.md               ← loaded individually
+├── DESIGN.md               ← loaded individually
+├── RULES/                  ← CAPS folder — each file toggleable separately
+│   ├── typescript.md
 │   ├── git-conventions.md
 │   └── code-review.md
-├── MEMORY/                 ← ALL_CAPS folder
-│   ├── decisions.md
-│   └── lessons-learned.md
-├── CONTEXT/                ← ALL_CAPS folder
+├── CONTEXT/                ← CAPS folder — supports mixed file types
 │   ├── glossary.md
-│   ├── acronyms.md
-│   └── domain.md
+│   ├── config.yaml
+│   └── schema.json
 ├── src/
-│   └── RULES.md            ← loaded when you mention src/
+│   └── GUIDE.md            ← auto-loaded when you reference src/
 └── api/
-    └── GUIDE.md            ← loaded when you mention api/
+    └── SPEC.md             ← auto-loaded when you reference api/
 ```
 
-## Single file examples
+## Global context
 
-| File | Use for |
-|---|---|
-| `STATUS.md` | Project status, blockers, sprint goals |
-| `DESIGN.md` | Architecture decisions, tech stack, system design |
-| `WORKFLOW.md` | Git conventions, PR process, deployment steps |
-| `STYLE.md` | Code style, writing tone, formatting rules |
-| `CONSTRAINTS.md` | Limitations, budgets, deadlines |
-| `TODO.md` | Outstanding tasks and priorities |
+Files in `~/.pi/CAPS/` are loaded in every project — useful for personal preferences, identity, or cross-project rules:
 
-## Folder examples
+```
+~/.pi/CAPS/
+├── IDENTITY.md       ← who you are, role, language preferences
+├── WORK_STYLE.md     ← how you like to work with AI
+└── STANDARDS/
+    ├── writing.md
+    └── code.md
+```
 
-| Folder | Use for |
-|---|---|
-| `RULES/` | Coding standards, git rules, review checklist |
-| `MEMORY/` | Past decisions, lessons learned, meeting notes |
-| `CONTEXT/` | Domain knowledge, glossary, acronyms, onboarding |
-| `API/` | Endpoint docs, schemas, auth flows |
-| `TEMPLATES/` | Reusable patterns, boilerplate, snippets |
-| `SECRETS/` | Env variable names, config keys (values only locally) |
+## /caps overlay
 
-## Filename rules
+Type `/caps` to open the context manager. Features:
 
-- Files: `ALL_CAPS.md` — uppercase letters, numbers, underscores
-- Folders: `ALL_CAPS/` — same pattern, any `.md` files inside are included
-- Valid: `STATUS.md`, `DESIGN.md`, `MY_RULES.md`, `STYLE_GUIDE.md`
-- Valid folders: `RULES/`, `MEMORY/`, `API/`, `CONTEXT/`
+### Folder collapse / expand
+Folders start collapsed. Navigate to a folder row and press space to expand it and see individual files. Press space again on the expanded header to toggle all files at once. Press `←` to collapse.
+
+```
+  ▶ ◑ RULES/ (3 files)        ← collapsed, space to expand
+  ☑ STATUS.md · 45 tokens
+
+  ▼ ◑ RULES/ (3 files)        ← expanded, space toggles all, ← collapses
+    ☑ typescript.md · 32 tokens
+    ☑ git-conventions.md · 28 tokens
+    ☐ code-review.md · 41 tokens
+  ☑ STATUS.md · 45 tokens
+```
+
+### Sort
+Navigate to the `⇅ Sort:` row and press space to cycle through:
+- `default` — discovery order
+- `a–z` — alphabetical
+- `tokens↓` — heaviest files first
+
+### Search / filter
+Start typing anywhere to filter the list. The list narrows live. Press `⌫` to erase. Press `Esc` to clear the filter.
+
+### Preview panel
+When your terminal is wide enough (≥74 cols), hovering a file opens a side panel showing its content with line numbers. Long files show top lines, a `── N lines ──` separator, and bottom lines.
+
+Hovering a folder header shows a summary of all files inside with their token counts.
+
+### Navigation
+| Key | Action |
+|-----|--------|
+| `↑↓` | Navigate |
+| `space` | Expand/collapse folder · toggle file · cycle sort |
+| `←` | Collapse expanded folder |
+| `esc` | Clear filter (if active) · close overlay |
+| Type anything | Filter list |
+| `⌫` | Erase filter character |
+
+## File watcher
+
+While pi is running, if you edit a CAPS file it detects the change and shows:
+
+```
+⚠  STATUS.md changed · restart to reload
+```
+
+Content isn't updated mid-session to avoid corrupting context — restart pi to pick up changes.
 
 ## Token counts
 
-Each file and folder shows an estimated token count so you can decide what's worth including. The total is displayed at the bottom.
+Token estimates use a word-based heuristic (more accurate than character counting). Each file shows its cost, and the overlay shows a running total.
 
 ```
 [CAPS Context]
-  STATUS.md · 257 tokens
-  DESIGN.md · 640 tokens
-  RULES/ · 129 tokens
-  API/ · 345 tokens
-  total: 1.4k tokens
+  STATUS.md · 45 tokens
+  RULES/typescript.md · 32 tokens
+  RULES/git-conventions.md · 28 tokens
+  total: 105 tokens
   /caps to toggle
 ```
 
-Helps you stay within context limits by seeing exactly what each item costs.
+## State persistence
 
-## Toggle files and folders
+Toggle choices are saved per-project in `.pi/caps-context-state.json` using atomic writes (safe against crashes). The file is per-project and not version-controlled.
 
-Type `/caps` to open the toggler overlay. Use ↑↓ to navigate, space to toggle, enter/esc to close. Folders toggle as a whole — all files inside are on or off together. State persists in `.pi/caps-context-state.json`.
+## Filename rules
 
-To change the keybinding, create or edit `~/.pi/agent/keybindings.json` and bind a custom shortcut to the `caps` command.
+- Root files: `ALL_CAPS.md` — uppercase letters, numbers, underscores only
+- Folders: `ALL_CAPS/` — same naming, any supported file type inside
+- Valid: `STATUS.md`, `MY_RULES.md`, `STYLE_GUIDE_V2.md`
+- Valid folders: `RULES/`, `MEMORY/`, `API/`, `CONTEXT/`
+
+## Single file ideas
+
+| File | Use for |
+|------|---------|
+| `STATUS.md` | Current sprint, blockers, recent decisions |
+| `DESIGN.md` | Architecture, tech stack, system design |
+| `WORKFLOW.md` | Git conventions, PR process, deployment |
+| `STYLE.md` | Code style, tone, formatting rules |
+| `CONSTRAINTS.md` | Limitations, budgets, non-negotiables |
+| `TODO.md` | Outstanding tasks and priorities |
+
+## Folder ideas
+
+| Folder | Use for |
+|--------|---------|
+| `RULES/` | Coding standards, review checklist |
+| `MEMORY/` | Past decisions, lessons learned |
+| `CONTEXT/` | Domain knowledge, glossary, onboarding |
+| `API/` | Endpoint docs, schemas, auth flows |
+| `TEMPLATES/` | Reusable patterns, boilerplate |
+
+## Keybinding
+
+To bind a custom shortcut to `/caps`, add to `~/.pi/agent/keybindings.json`:
+
+```json
+{
+  "bindings": [
+    { "key": "ctrl+shift+c", "command": "caps" }
+  ]
+}
+```
