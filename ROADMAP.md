@@ -21,6 +21,55 @@ See `CHANGELOG.md` for the v2.1.0 release notes.
 
 ---
 
+## Release Procedure — applies at end of every phase
+
+Run through this checklist before tagging any v2.x.0 (and most x.y.z patches). Items in **bold** are blocking.
+
+### 1. Code green
+- [ ] **`npm test` passes locally** (all current tests; no skips)
+- [ ] **`npm run coverage` reviewed** — coverage didn't regress; if a major area is still 0%, decide: cover now, or note as deferred in CHANGELOG "Internal" section
+- [ ] **CI green on `master`** before tagging (check the `CI` workflow run)
+
+### 2. Doc sync
+- [ ] **`CHANGELOG.md`** — new version section with Added / Changed / Fixed / Security / Deprecated / Internal (only the ones that apply). Date in YYYY-MM-DD. Be honest about deprecations.
+- [ ] **`README.md`** — every new command surface documented (Commands table, Configuration schema if a field was added, Troubleshooting if a new failure mode is now diagnosable). Remove anything the release made wrong.
+- [ ] **`CONTEXT.md`** — new canonical terms added if the version introduces domain concepts. New Relationships entries if behavior couples differently. _Avoid_ lines kept current.
+- [ ] **`CLAUDE.md`** — Commands section updated, Testing section refreshed (test count, what's still untested), command surface list current. Remove stale tripwire reminders for bugs that have been fixed.
+- [ ] **`ROADMAP.md`** — version Status table updated (✅ Shipped + date), the section header for the just-shipped version marked, "Three Bets For Next Sprint" rewritten for the next milestone, anything killed during the version moved to "Killed Ideas".
+- [ ] **Docs review** — re-read README end-to-end. If it crosses ~400 lines or splits naturally into "user guide" vs "reference", create `docs/` and split. Do this lazily — only when natural, not preemptively.
+
+### 3. Version bump
+- [ ] **`package.json`** — bump `version` (semver: bug fixes = patch, new features = minor, breaking = major)
+- [ ] If breaking, the previous major must have lived long enough for npm users to migrate (3+ months as a rule of thumb)
+
+### 4. Settings flip
+- [ ] If you've been on local-dev mode for testing, flip `~/.pi/agent/settings.json` back to `"npm:pi-capitals-context"` so the published version is what gets used across other projects. (Flip back to local after publish if continuing dev.)
+
+### 5. Tag + push
+```
+git push origin master
+git tag v<version>
+git push origin v<version>
+```
+
+### 6. Verify ship
+- [ ] **CI: `Publish to npm` workflow succeeded** (`gh run list --limit 3`)
+- [ ] **`npm view pi-capitals-context version`** returns the new version
+- [ ] **`npm view pi-capitals-context dist-tags`** shows `latest: <new version>`
+- [ ] Pull the published version in a *different* project (not `testing-caps`) and confirm `[CAPS Context]` (no LOCAL DEV suffix) — confirms registry serves correctly
+
+### 7. Post-ship cleanup
+- [ ] Remove any mock files from `testing-caps/` (keep `.gitkeep` + `CLAUDE.md`)
+- [ ] Close TaskList entries for the shipped version
+- [ ] If continuing dev: flip settings back to local-dev mode
+
+### When this procedure breaks
+- A pre-commit hook failed → fix the underlying issue, never `--no-verify`
+- CI passed locally but failed on push → likely platform difference (LF/CRLF, symlink permissions on Windows runners); add platform-conditional test skips, don't disable tests
+- npm publish failed but tag is pushed → don't re-tag; bump patch (`v2.1.1`) and republish. Tags must be immutable once public.
+
+---
+
 ## Ultimate Vision
 
 **Personal Context Conductor.** You see exactly what AI sees, you choose what's worth paying for, you never waste a token. Manual curation stays the soul — automation only assists, never decides. Terminal-first, single-user, opinionated.
