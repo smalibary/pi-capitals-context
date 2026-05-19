@@ -12,8 +12,8 @@
 | Version | Status | Highlights |
 |---|---|---|
 | **v2.1.0** | ✅ Shipped — 2026-05-20 | tests + CI gate, modular `src/`, all audit bugs fixed, `/caps-advance skip`, `/caps-prompt`, `/caps-doctor`, configurable discovery, defensive limits |
-| **v2.2** | next | state persistence completeness, watcher upgrades, overlay clarity, filter/nav, editor integration |
-| **v2.3** | planned | rest of `/caps-advance` — profiles, token budget, tags, conditions, per-CAPS injection format |
+| **v2.2** | in progress | **UI-first redesign**: every action becomes an **Overlay**. Profiles full CRUD, `/caps-settings` hub, retire `/caps-advance` / `/caps-prompt` / `/caps-doctor` standalone commands |
+| **v2.3** | planned | rest of `/caps-advance` features as overlays — token budget, tags, conditions, per-CAPS injection format |
 | **v2.4** | planned | cache & cost — freeze mode, accurate tokens, folder index injection, cache-bust warnings |
 | **v3.0** | planned | platform — `/caps-init`, includes/imports, public API, content search, ephemeral CAPS, auto-context |
 
@@ -221,88 +221,100 @@ Goal: SKIP list is user's choice, not hardcoded. Same for CAPS naming regex.
 
 ---
 
-# v2.2 — Polish & Trust
+# v2.2 — UI-First Redesign
 
-Goal: tool feels finished. Every irritation from daily use removed.
+Goal: every action this project ships is an **Overlay**. Subcommand dispatchers and flag-based CLIs retire. The slash-command surface shrinks to three primary entry points:
 
-## v2.2-F1 — State persistence completeness [A1+A2]
+| Command | Role |
+|---|---|
+| `/caps` | Daily driver — toggle CAPS files |
+| `/caps-profile` | Full CRUD on **Profile**s |
+| `/caps-settings` | **Settings Hub** — skip list, prompt preview, diagnose, configuration |
 
-Goal: nothing resets between `/caps` invocations.
+Doctrine source: see `CLAUDE.md` `# UI-First Rule`, `CONTEXT.md` `## Design philosophy`. Memory: `feedback-command-surface`, `feedback-overlay-first-design`.
 
-- [ ] Persist sort mode in state JSON
-- [ ] Persist expanded/collapsed folder set in state JSON
-- [ ] Persist filter draft (optional — opt-in via setting)
-- [ ] Preserve cursor position when filter changes (don't reset to 0)
-- [ ] Garbage-collect orphan state entries (file no longer exists → drop key after 30 days)
-- [ ] Retry atomic write on Windows `EBUSY` (3 attempts, 50ms backoff)
-- [ ] Clean up `.tmp` files on startup
+## v2.2-F1 — `/caps-profile` overlay + create flow ✅ shipped this cycle
 
-**In scope:** state schema additions, GC, Windows reliability.
-**Out of scope:** profile state (v2.3 — different file).
-**Depends on:** v2.1.
+Goal: bring **Profile** management into an **Overlay**. The killer feature is now discoverable.
 
-## v2.2-F2 — Watcher upgrades [A1+A2]
+- [x] `/caps-profile` (no args) opens picker overlay
+- [x] `+ Create new profile` row chains `/caps` file picker → name-input overlay
+- [x] Inline diff preview per profile row
+- [x] Enter loads, `d` twice deletes, Esc quits
+- [x] Discard restores prior toggle state (safety on cancel)
+- [x] Typed shortcuts retained: `save`, `load --dry-run`, `rename`, `list`
 
-Goal: file changes are actionable, not just notifications.
+## v2.2-F2 — Profile full CRUD (rename + edit)
 
-- [ ] Detect new CAPS files mid-session (currently invisible)
-- [ ] Distinct messages: `added`, `modified`, `deleted` (currently all generic)
-- [ ] Show what changed in diff snippet (first 3 changed lines)
-- [ ] Add `r` keybind in overlay to hot-reload changed files without pi restart
-- [ ] Reset `changedPaths` after each render (currently grows forever)
-- [ ] Watch `~/.pi/CAPS/` too (currently project-only)
+Goal: complete the **Profile** **Overlay** surface — no need to drop to typed commands.
 
-**In scope:** watcher events, hot reload, mid-session discovery.
-**Out of scope:** auto-reload (opt-in user action only).
-**Depends on:** v2.1-F2.
+- [ ] `r` on profile row → opens name-input overlay pre-filled with current name; on save, calls `renameProfile`
+- [ ] `e` on profile row → loads profile into session, opens `/caps`, saves toggles back into the same profile on Enter
+- [ ] Help line updates to advertise both keys
+- [ ] Tests cover both flows + edge cases (rename to existing name, edit when profile is empty)
 
-## v2.2-F3 — Overlay clarity [A1+A2]
+**In scope:** new keys on existing **Overlay**, no new overlays.
+**Out of scope:** profile import/export, profile diffing across machines.
+**Depends on:** v2.2-F1.
 
-Goal: discoverability at a glance.
+## v2.2-F3 — `/caps-settings` hub + skip overlay
 
-- [ ] Visual section headers in overlay: `── Project CAPS ──`, `── Global CAPS ──`, `── Auto-loaded (subdir) ──`
-- [ ] Show disabled count in startup display block: `3 files enabled · 5 available · /caps`
-- [ ] ASCII fallback for unicode symbols (☑/☐/◑ → `[x]`/`[ ]`/`[~]`) — auto-detect or `--ascii` flag
-- [ ] Stack preview below list when terminal < 74 cols (currently hidden entirely)
-- [ ] Help line: progressive disclosure — `?` toggles full keybind help
-- [ ] First-run hint banner when state file doesn't exist yet
+Goal: introduce the **Settings Hub** and migrate the first of the legacy commands into it.
 
-**In scope:** overlay rendering and discoverability.
-**Out of scope:** advanced filtering (v2.3 — fuzzy/regex).
-**Depends on:** v2.1-F2.
+- [ ] New `/caps-settings` command opens hub overlay
+- [ ] Hub rows: `Skip list`, `Prompt preview`, `Diagnose / Doctor`, `Configuration` (last three are stubs in this phase)
+- [ ] Build **Skip list overlay** — lists current entries, `a` adds (name-input), `d` deletes (with arming), `R` resets to defaults
+- [ ] `/caps-advance skip *` typed surface keeps working as a fallback alias
 
-## v2.2-F4 — Filter & navigation [A2]
+**In scope:** hub + one fully-implemented row.
+**Out of scope:** the other three rows' implementations (next phases).
+**Depends on:** v2.2-F2.
 
-Goal: power keys without breaking simplicity.
+## v2.2-F4 — Prompt-preview overlay
 
-- [ ] `g`/`G` jumps top/bottom
-- [ ] `i` inverts selection (current filter scope)
-- [ ] `V` then arrow for range selection
-- [ ] Filter: substring + fuzzy match (toggle with `/` vs `f`)
-- [ ] `Esc` semantics: clear filter if active, else close (document in help line)
+Goal: replace `/caps-prompt` with a navigable preview.
 
-**In scope:** keybind additions, fuzzy match.
-**Out of scope:** regex filter (v2.3 advanced), content search (v3.0).
+- [ ] **Prompt-preview overlay** opens from the Settings Hub `Prompt preview` row
+- [ ] Shows the assembled injection text in a scrollable view
+- [ ] Keys: `c` copy to clipboard, `p` diff vs previous turn, `Esc` close
+- [ ] Per-file byte + token stats in a footer line
+
+**In scope:** the overlay + a way to scroll.
+**Out of scope:** editing files from this view (deferred — `/caps` has the `e` key for that).
 **Depends on:** v2.2-F3.
 
-## v2.2-F5 — Editor integration [A2]
+## v2.2-F5 — Doctor overlay
 
-Goal: jump from preview to edit in one keypress.
+Goal: replace `/caps-doctor` with a structured **Overlay** report.
 
-- [ ] `e` in overlay opens current file in `$EDITOR` (fallback `$VISUAL`, then `code`/`notepad`)
-- [ ] On editor exit, refresh file content + token count
-- [ ] Document `$EDITOR` configuration
+- [ ] **Doctor overlay** opens from the Settings Hub `Diagnose / Doctor` row
+- [ ] Sections (scrollable): cwd, state file, watchers, last injection size, every entry classified
+- [ ] Key `v` toggles verbose mode in-place (no separate command/flag)
+- [ ] Esc closes
 
-**In scope:** spawn-editor only.
-**Out of scope:** in-overlay editing.
-**Depends on:** v2.2-F2 (hot reload mechanism).
+**In scope:** report rendering inside an overlay.
+**Out of scope:** auto-fix actions (out per `CONTEXT.md`).
+**Depends on:** v2.2-F3.
+
+## v2.2-F6 — Retire legacy commands
+
+Goal: drop the dispatcher and the standalone preview/doctor commands.
+
+- [ ] Remove `/caps-advance` (skip and profile routes now live in the Hub and `/caps-profile`)
+- [ ] Remove `/caps-prompt` and `/caps-doctor` as standalone commands (or keep as bare aliases that open `/caps-settings` at the right row — to be decided in F6)
+- [ ] CHANGELOG entry under "Removed" with migration notes
+- [ ] CLAUDE.md commands list shrinks to three entries
+
+**In scope:** removal + migration notes.
+**Out of scope:** keeping legacy surfaces beyond a single transitional release.
+**Depends on:** v2.2-F3, F4, F5.
 
 ## v2.2 Acceptance Criteria
 
-- No state resets between sessions
-- Watcher provides actionable info, not just "restart"
-- Overlay readable on 60-col terminal
-- Test coverage ≥ 70%
+- Three primary commands, no dispatcher
+- Every legacy typed command has an **Overlay** equivalent
+- Test coverage of overlay logic — every overlay class tested
+- Screenshots for every overlay in docs / README
 
 ---
 
@@ -620,10 +632,10 @@ Things explicitly NOT on the roadmap, with reasons:
 
 # Three Bets For Next Sprint
 
-v2.1 shipped all three original bets (test harness, `/caps-prompt`, `/caps-doctor`). For v2.2, three highest-impact bets:
+For v2.2 (UI-first redesign), the three highest-impact bets in order:
 
-1. **Profiles (v2.3-F1) brought forward** — single feature that takes the tool from "manual toggler" to "task context manager". Already-built `/caps-advance` dispatcher in v2.1 makes this small. Highest UX win remaining.
-2. **Hot reload on edit (v2.2-F2)** — file watcher already fires; current UX is "restart pi" which is painful. Press `r` in overlay to reload, distinct watcher messages for `added`/`modified`/`deleted`.
-3. **State persistence completeness (v2.2-F1)** — sort mode, expanded folders, cursor position should all survive `/caps` close-reopen. Tens of small persistence holes — fix together.
+1. **`/caps-profile` overlay + create flow** (v2.2-F1) — ✅ shipped this cycle. Brought v2.3-F1 forward and reshaped it as an **Overlay**-first feature, which became the seed of the v2.2 design philosophy.
+2. **`/caps-settings` hub + skip overlay** (v2.2-F3) — the architectural pivot. Once the hub exists, retiring `/caps-advance`/`/caps-prompt`/`/caps-doctor` becomes mechanical work.
+3. **Profile full CRUD** (v2.2-F2) — rename + edit close the loop on the **Profile** **Overlay**. Small lift, big UX win for users who want to iterate on saved profiles.
 
-Defer to v2.3+: budgets, tags, conditions, freeze mode, includes, auto-context.
+Defer to v2.3+: budgets, tags, conditions, freeze mode, includes, auto-context. Deferred from the earlier v2.2 plan (not lost): state persistence completeness, watcher upgrades, overlay clarity polish, fuzzy nav. Those return to the roadmap once the UI-first foundation is in place.

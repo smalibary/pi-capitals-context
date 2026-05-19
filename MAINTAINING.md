@@ -14,7 +14,7 @@ This file is meta-doc — added to the default `skipFiles` so it never auto-inje
 | `CHANGELOG.md` | Anyone reviewing a release | Every version bump — Added / Changed / Fixed / Security / Deprecated / Internal |
 | `ROADMAP.md` | Future me, future Claude | When versioned plans change; mark shipped versions with ✅; refresh "Three Bets For Next Sprint" |
 | `CONTEXT.md` | Anyone (especially Claude in future sessions) writing or reviewing code | New domain term introduced; existing term's scope changes |
-| `CLAUDE.md` | Claude in future sessions | New command surface; testing state change; project boundary shift |
+| `CLAUDE.md` | Claude in future sessions | New command surface; testing state change; project boundary shift; **design rule change (e.g., UI-first)** |
 | `MAINTAINING.md` | The maintainer (you, me, future contributors) | Doc structure or release procedure changes |
 
 ---
@@ -108,16 +108,24 @@ Lives in `ROADMAP.md` as the single source of truth. When you change *how* relea
 
 ## Screenshots
 
-### When to take
+### Overlay screenshot rule (UI-first project)
 
-- New overlay UI lands (`/caps` change, new sub-overlay)
-- New diagnostic output worth showing (`/caps-doctor` formatted report, `/caps-prompt` preview)
+Every new **Overlay** class needs a screenshot before its feature is considered shipped. This is non-negotiable for this project — overlays *are* the surface, so docs that describe them in prose without an image are doing half the job.
+
+- Default location: `docs/overlays/<overlay-name>.png` (e.g., `docs/overlays/profile-selector.png`). Create the directory the first time it's needed.
+- One screenshot per overlay state worth showing (empty state, populated state, armed-delete state, etc.). Two or three per overlay is fine; more than that suggests the overlay does too much.
+- Embed in `CHANGELOG.md` entries for the feature, and in `README.md` if the overlay is part of the daily-driver surface.
+
+### When to take (general)
+
+- New **Overlay** UI lands (any new overlay class, or major change to an existing one)
+- New diagnostic output worth showing (Doctor overlay, prompt-preview overlay)
 - README's `[CAPS Context]` example block gets stale (commands renamed, output format changed)
 
 ### Where to store
 
-- Before `docs/` split: at repo root as `screenshot-<feature>.png` (e.g., `screenshot-caps-overlay.png`)
-- After `docs/` split: `docs/images/<feature>.png`
+- **Overlays**: `docs/overlays/<overlay-name>.png` (see Overlay screenshot rule above)
+- **Other UI states / examples** (non-overlay): `screenshot-<feature>.png` at repo root before `docs/` split, or `docs/images/<feature>.png` after
 
 ### How to take (Windows)
 

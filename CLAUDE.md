@@ -5,7 +5,19 @@ pi extension for personal, toggleable AI context management. See `CONTEXT.md` fo
 **In scope:** file discovery, toggle state, system prompt injection, /caps overlay UI, token estimation, file watching, config-file overrides, diagnostics.
 **Out of scope:** team sharing, semantic retrieval, doc editing, replacing CLAUDE.md.
 
-Use terms from `CONTEXT.md` exactly — CAPS File, CAPS Folder, Toggle, State, Injection, Session, Global CAPS, Project CAPS, Root CAPS, Subdir CAPS, Config File, Skip List, Doctor, Profile.
+Use terms from `CONTEXT.md` exactly — CAPS File, CAPS Folder, Toggle, State, Injection, Session, Global CAPS, Project CAPS, Root CAPS, Subdir CAPS, Config File, Skip List, Doctor, Profile, Overlay, Settings Hub.
+
+# UI-First Rule
+
+Every new action this project ships is an **Overlay** flow first. Typed slash-command arguments are a scripting fallback, not the primary surface.
+
+- **Default**: new action → overlay. Pick, navigate with arrows, act with Enter / single-letter keys (`d` delete, `r` rename, `e` edit), cancel with Esc.
+- **Typed args**: allowed only as a parallel scripting path for actions that already have an overlay. Never as the only way to do a thing.
+- **Multi-step flows**: chain overlays via `ctx.ui.custom` calls in the handler. Each overlay closes on its own `done()`, the next opens after. Always provide an explicit discard path (restore previous state on cancel).
+- **No subcommand dispatchers**: `/foo bar baz <name>` is friction. If the action is picking from a list, the overlay shows the list. If naming/typing is required, a name-input overlay does it.
+- **No flags for discoverable actions**: `--copy`, `--dry-run`, `--diff` belong on keys inside the overlay (`c` copy, `p` preview, etc.), not on the slash command.
+
+Out of scope for this rule: trivial one-shot text commands like `/caps-doctor --verbose` for scripting — these are *secondary* to the overlay, not replacements.
 
 # Commands (current surface as of v2.2-dev)
 
