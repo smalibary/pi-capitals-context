@@ -36,3 +36,40 @@ export function formatSystemPromptExtra(enabled: FileEntry[]): string {
 	for (const f of enabled) extra += `\n### ${f.relativePath}\n\n${f.content}\n`;
 	return extra;
 }
+
+function byteLength(s: string): number {
+	return Buffer.byteLength(s, "utf-8");
+}
+
+function formatBytes(n: number): string {
+	if (n >= 1024) return `${(n / 1024).toFixed(1)}KB`;
+	return `${n}B`;
+}
+
+export function buildPromptPreview(enabled: FileEntry[], theme: Theme): string {
+	const lines: string[] = [];
+	lines.push(theme.fg("accent", "[CAPS Injection Preview]"));
+
+	if (enabled.length === 0) {
+		lines.push(theme.fg("dim", "  no files enabled — nothing would be injected"));
+		return lines.join("\n");
+	}
+
+	let totalBytes = 0;
+	let totalTokens = 0;
+	for (const f of enabled) {
+		const b = byteLength(f.content);
+		const t = estimateTokens(f.content);
+		totalBytes += b;
+		totalTokens += t;
+		lines.push(
+			theme.fg("muted", `  ${f.relativePath}`) +
+			theme.fg("dim", ` · ${formatBytes(b)} · ${formatTokens(t)} tokens`),
+		);
+	}
+	lines.push(theme.fg("dim", `  total: ${formatBytes(totalBytes)} · ${formatTokens(totalTokens)} tokens`));
+	lines.push("");
+	lines.push(theme.fg("accent", "──── Injected text ────"));
+	lines.push(formatSystemPromptExtra(enabled).trimStart());
+	return lines.join("\n");
+}
