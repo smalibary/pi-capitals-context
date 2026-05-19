@@ -1,6 +1,6 @@
 {
   "name": "pi-capitals-context",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Auto-inject ALL_CAPS context files into pi's system prompt — per-file toggles, folder collapse, global ~/.pi/CAPS, search, sort, preview, file watcher",
   "main": "extensions/index.ts",
   "keywords": ["pi-package"],
