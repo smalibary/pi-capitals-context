@@ -20,6 +20,7 @@
   "type": "module",
   "files": [
     "extensions",
+    "src",
     "README.md",
     "LICENSE"
   ],

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateState } from "../extensions/index.js";
+import { validateState } from "../src/state.js";
 
 describe("validateState", () => {
 	it("returns empty object for null", () => {

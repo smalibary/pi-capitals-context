@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { CAPS_FILE_RE, CAPS_DIR_RE, SKIP_FILES, SKIP_DIRS } from "../extensions/index.js";
+import { CAPS_FILE_RE, CAPS_DIR_RE, SKIP_FILES, SKIP_DIRS } from "../src/discovery.js";
 
 describe("CAPS_FILE_RE", () => {
 	it("matches ALL_CAPS .md files", () => {
