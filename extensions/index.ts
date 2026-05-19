@@ -36,14 +36,16 @@ import {
 } from "../src/state.js";
 import { buildDisplayText, formatSystemPromptExtra } from "../src/injection.js";
 import { CapsSelector } from "../src/overlay.js";
+import { loadConfig, defaultConfig, type CapsConfig } from "../src/config.js";
 
 export default function capitalsContextExtension(pi: ExtensionAPI) {
 	let rootFiles: FileEntry[] = [];
 	let globalFiles: FileEntry[] = [];
 	let subdirFiles: FileEntry[] = [];
 	let cwd = "";
+	let config: CapsConfig = defaultConfig();
+	let savedState: Record<string, boolean> = {};
 	let startupShown = false;
-	let firstMsgSent = false;
 	let watchers: fs.FSWatcher[] = [];
 	let changedPaths = new Set<string>();
 	const debounceMap = new Map<string, ReturnType<typeof setTimeout>>();
@@ -82,28 +84,29 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 
 	pi.on("session_start", async (_event, ctx) => {
 		cwd = ctx.cwd;
+		config = loadConfig(cwd);
 		clearWatchers();
 		changedPaths = new Set();
-		const saved = loadState(cwd);
+		savedState = loadState(cwd);
 
 		const capsFiles: FileEntry[] = [];
-		for (const fp of await findCapsFiles(cwd)) {
-			const f = await readFileContent(fp, cwd);
+		for (const fp of await findCapsFiles(cwd, config)) {
+			const f = await readFileContent(fp, cwd, config);
 			if (!f) continue;
-			const entry: FileEntry = { ...f, enabled: saved[f.relativePath] ?? true, isRoot: true };
+			const entry: FileEntry = { ...f, enabled: savedState[f.relativePath] ?? true, isRoot: true };
 			capsFiles.push(entry);
 			watchFile(entry, fp);
 		}
 
 		const dirEntries: FileEntry[] = [];
-		for (const { dirName, files } of await findCapsDirs(cwd)) {
+		for (const { dirName, files } of await findCapsDirs(cwd, config)) {
 			for (const fp of files) {
-				const f = await readFileContent(fp, cwd);
+				const f = await readFileContent(fp, cwd, config);
 				if (!f) continue;
 				const entry: FileEntry = {
 					relativePath: f.relativePath,
 					content: f.content,
-					enabled: saved[f.relativePath] ?? true,
+					enabled: savedState[f.relativePath] ?? true,
 					isRoot: true,
 					folderGroup: `${dirName}/`,
 				};
@@ -117,8 +120,8 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 		const globalSaved = loadGlobalState();
 		const globalEntries: FileEntry[] = [];
 
-		for (const fp of await findCapsFiles(GLOBAL_CAPS_DIR)) {
-			const f = await readFileContent(fp, GLOBAL_CAPS_DIR);
+		for (const fp of await findCapsFiles(GLOBAL_CAPS_DIR, config)) {
+			const f = await readFileContent(fp, GLOBAL_CAPS_DIR, config);
 			if (!f) continue;
 			const key = `~/${f.relativePath}`;
 			const entry: FileEntry = { relativePath: key, content: f.content, enabled: globalSaved[key] ?? true, isRoot: true, isGlobal: true };
@@ -126,9 +129,9 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 			watchFile(entry, fp);
 		}
 
-		for (const { dirName, files } of await findCapsDirs(GLOBAL_CAPS_DIR)) {
+		for (const { dirName, files } of await findCapsDirs(GLOBAL_CAPS_DIR, config)) {
 			for (const fp of files) {
-				const f = await readFileContent(fp, GLOBAL_CAPS_DIR);
+				const f = await readFileContent(fp, GLOBAL_CAPS_DIR, config);
 				if (!f) continue;
 				const key = `~/${f.relativePath}`;
 				const entry: FileEntry = {
@@ -153,15 +156,20 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 		}
 	});
 
+	const persistProjectState = () => {
+		if (rootFiles.length > 0 || subdirFiles.length > 0) {
+			saveState(cwd, [...rootFiles, ...subdirFiles]);
+		}
+	};
+
 	pi.on("session_shutdown", async () => {
 		clearWatchers();
-		if (rootFiles.length > 0) saveState(cwd, rootFiles);
+		persistProjectState();
 		if (globalFiles.length > 0) saveGlobalState(globalFiles);
 	});
 
 	const openSelector = async (ctx: any) => {
-		if (firstMsgSent) return;
-		const allFiles = [...rootFiles, ...globalFiles];
+		const allFiles = [...rootFiles, ...subdirFiles, ...globalFiles];
 		if (allFiles.length === 0) {
 			ctx.ui.notify("No CAPS files found", "info");
 			return;
@@ -169,7 +177,7 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 		await ctx.ui.custom((_tui: any, theme: Theme, _kb: any, done: () => void) => {
 			const selector = new CapsSelector(allFiles, theme);
 			selector.onDone = () => {
-				saveState(cwd, rootFiles);
+				persistProjectState();
 				if (globalFiles.length > 0) saveGlobalState(globalFiles);
 				done();
 			};
@@ -184,41 +192,50 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 	});
 
 	pi.on("before_agent_start", async (event, ctx) => {
-		firstMsgSent = true;
 		const seenPaths = new Set([...rootFiles, ...subdirFiles].map(f => f.relativePath));
 
 		try {
 			const subdirs = new Set<string>();
-			for (const d of await extractSubdirs(event.prompt, cwd)) subdirs.add(d);
+			for (const d of await extractSubdirs(event.prompt, cwd, config)) subdirs.add(d);
 			const entries = ctx.sessionManager.getEntries();
 			for (const entry of entries) {
 				if (entry.type === "tool_call" && entry.input) {
 					const s = typeof entry.input === "string" ? entry.input : JSON.stringify(entry.input);
-					for (const d of await extractSubdirs(s, cwd)) subdirs.add(d);
+					for (const d of await extractSubdirs(s, cwd, config)) subdirs.add(d);
 				}
 			}
 			for (const dir of subdirs) {
-				for (const fp of await findCapsFiles(dir)) {
-					const file = await readFileContent(fp, cwd);
+				for (const fp of await findCapsFiles(dir, config)) {
+					const file = await readFileContent(fp, cwd, config);
 					if (file && !seenPaths.has(file.relativePath)) {
 						seenPaths.add(file.relativePath);
-						subdirFiles.push({ ...file, enabled: true, isRoot: false });
+						subdirFiles.push({ ...file, enabled: savedState[file.relativePath] ?? true, isRoot: false });
 					}
 				}
-				for (const { dirName, files } of await findCapsDirs(dir)) {
+				for (const { dirName, files } of await findCapsDirs(dir, config)) {
 					const dirPrefix = `${path.relative(cwd, dir).replace(/\\/g, "/")}/${dirName}/`;
 					for (const fp of files) {
-						const file = await readFileContent(fp, cwd);
+						const file = await readFileContent(fp, cwd, config);
 						if (file && !seenPaths.has(file.relativePath)) {
 							seenPaths.add(file.relativePath);
-							subdirFiles.push({ relativePath: file.relativePath, content: file.content, enabled: true, isRoot: false, folderGroup: dirPrefix });
+							subdirFiles.push({
+								relativePath: file.relativePath,
+								content: file.content,
+								enabled: savedState[file.relativePath] ?? true,
+								isRoot: false,
+								folderGroup: dirPrefix,
+							});
 						}
 					}
 				}
 			}
+			if (subdirFiles.length > config.maxSubdirFiles) {
+				const drop = subdirFiles.length - config.maxSubdirFiles;
+				subdirFiles.splice(0, drop);
+			}
 		} catch { /* fallback */ }
 
-		const enabled = [...rootFiles.filter(f => f.enabled), ...subdirFiles, ...globalFiles.filter(f => f.enabled)];
+		const enabled = [...rootFiles.filter(f => f.enabled), ...subdirFiles.filter(f => f.enabled), ...globalFiles.filter(f => f.enabled)];
 		const extra = formatSystemPromptExtra(enabled);
 		if (!extra) return;
 
