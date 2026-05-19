@@ -7,6 +7,22 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Added
+- **`/caps-profile`** — named snapshots of project toggles, overlay-first UX:
+  - **Picker overlay** — `/caps-profile` (no args) opens a list with
+    `+ Create new profile` at the top followed by saved profiles. ↑↓ to
+    navigate, Enter to load (existing) or start the create flow, `d` twice
+    to delete a profile, Esc to quit. Inline diff preview shows what each
+    profile would change vs current toggles.
+  - **Create flow** — picking "Create new" chains into the `/caps` file
+    picker (toggle the files you want in this profile, Enter to confirm),
+    then a name-input overlay (type, Enter to save, Esc to discard).
+    Discarding restores the toggle state from before the flow.
+  - **Typed shortcuts** still work: `save <name>`, `load <name> [--dry-run]`,
+    `rename <old> <new>`, `list`. Stored in `.pi/caps-profiles.json`.
+    Project-scoped; Global CAPS toggles unchanged. (v2.3-F1 pulled forward.)
+- **Legacy `/caps-advance profile *`** — same dispatcher path still works
+  during the transition; will be removed once `/caps-skip` ships and the
+  `/caps-advance` umbrella is retired.
 - `MAINTAINING.md` — single-file guide covering doc inventory, when to split
   into `docs/`, per-file update rules, screenshot conventions, diagram policy,
   doc-rot checklist. Linked from `ROADMAP.md` Release Procedure.

@@ -60,6 +60,10 @@ _Avoid_: ignore list, blacklist, exclusion list
 A diagnostic command (`/caps-doctor`) that reports cwd, **State** file location and validity, watcher count, last **Injection** size, every entry in the project directory with classification (included vs skipped + reason), and which **Config File** overrides are active. The primary "why isn't this loading?" tool.
 _Avoid_: debug, diagnostics
 
+**Profile**:
+A named snapshot of **Toggle** decisions for a project, persisted to `.pi/caps-profiles.json`. Loading a **Profile** restores the captured toggles and overwrites the current **State**. Project-scoped only — **Global CAPS** toggles are not part of a **Profile**.
+_Avoid_: preset, mode, layout
+
 ## Relationships
 
 - A **CAPS Folder** contains one or more **CAPS Files**
@@ -70,6 +74,7 @@ _Avoid_: debug, diagnostics
 - **Injection** happens once per agent run, using the **State** at that moment
 - **Skip List** decisions are filter-level — affected files are not discovered, not just disabled
 - **Config File** lookup order: built-in defaults < global < project; project always wins
+- A **Profile** captures **State** at a moment in time and is replayed on load; **Profile** storage is separate from **State** storage
 - CLAUDE.md is outside this system — always-on, not a **CAPS File**, never toggled
 
 ## What this is NOT

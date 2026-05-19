@@ -172,9 +172,19 @@ To bind a custom shortcut to `/caps`, add to `~/.pi/agent/keybindings.json`:
 | Command | What it does |
 |---|---|
 | `/caps` | Toggle overlay — root, subdir, and global CAPS files. Daily driver. |
-| `/caps-advance skip <list\|add\|remove\|reset>` | Manage the project skip list. Power-user surface; more subcommands land in v2.3 (profiles, budgets, tags). |
+| `/caps-profile` | Overlay picker for saved toggle profiles. Top row is `+ Create new profile` — picking it chains into the `/caps` file picker, then a name-input overlay (Enter saves, Esc discards & restores toggles). Existing profile rows: Enter loads, `d` twice deletes, Esc quits. Project-scoped; Global CAPS toggles untouched. |
+| `/caps-advance skip <list\|add\|remove\|reset>` | Manage the project skip list. |
 | `/caps-prompt` | Print the exact text that gets injected into the system prompt. `--copy` pipes to clipboard, `--diff` shows line-diff vs previous turn. Trust check. |
 | `/caps-doctor` | Diagnose discovery, state file, watchers, last injection, config sources. `--verbose` shows every entry in cwd with classification. |
+
+### Profiles (typed shortcuts)
+
+- `/caps-profile save <name>` — capture current toggles into a named profile
+- `/caps-profile load <name> [--dry-run]` — apply profile (or preview with `--dry-run`)
+- `/caps-profile rename <old> <new>` — rename a profile
+- `/caps-profile list` — print profile names (text fallback)
+
+Profiles persist to `.pi/caps-profiles.json` (atomic write). Loading applies immediately and persists project state — no pi restart needed.
 
 Each command supports `help` (e.g. `/caps-doctor help`) for inline usage.
 
