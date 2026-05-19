@@ -5,12 +5,14 @@ pi extension for personal, toggleable AI context management. See `CONTEXT.md` fo
 **In scope:** file discovery, toggle state, system prompt injection, /caps overlay UI, token estimation, file watching, config-file overrides, diagnostics.
 **Out of scope:** team sharing, semantic retrieval, doc editing, replacing CLAUDE.md.
 
-Use terms from `CONTEXT.md` exactly — CAPS File, CAPS Folder, Toggle, State, Injection, Session, Global CAPS, Project CAPS, Root CAPS, Subdir CAPS, Config File, Skip List, Doctor.
+Use terms from `CONTEXT.md` exactly — CAPS File, CAPS Folder, Toggle, State, Injection, Session, Global CAPS, Project CAPS, Root CAPS, Subdir CAPS, Config File, Skip List, Doctor, Profile.
 
-# Commands (current surface as of v2.1)
+# Commands (current surface as of v2.2-dev)
 
 - `/caps` — toggle overlay (daily driver)
-- `/caps-advance skip <list|add|remove|reset>` — power-user skip list editor; future subcommands (profiles, budgets, tags) land in v2.3
+- `/caps-profile` — overlay picker for profiles. Top row `+ Create new profile` chains /caps + name-input overlays (Enter save, Esc discard restores toggles). Profile rows: Enter load, d-twice delete, Esc quit. Typed: `save <name>`, `load <name> [--dry-run]`, `rename <old> <new>`, `list`.
+- `/caps-advance skip <list|add|remove|reset>` — skip list editor (planned to move to /caps-skip with its own overlay; `/caps-advance` umbrella retires after that)
+- `/caps-advance profile <list|save|load|delete|rename>` — legacy alias for `/caps-profile`; same handler, transitional surface
 - `/caps-prompt [--copy] [--diff]` — show exact injected text + per-file stats
 - `/caps-doctor [--verbose]` — diagnose discovery, state, watchers, config sources
 
@@ -45,10 +47,10 @@ Rules:
 - Refactor -> run tests after every module split. Behavior must not change.
 - Run `npm test` before declaring task done. Not optional.
 
-Current state (v2.1):
-- 98 tests across 10 files; coverage ~30% lines, ~88% branches on covered code
+Current state (v2.2-dev):
+- 163 tests across 13 files; coverage ~30% lines, ~88% branches on covered code
 - All v2.0 audit tripwires flipped — loose-match fix, LICENSE/CHANGELOG/README in default skip list
-- Tested: `discovery`, `config`, `config-writer`, `state`, `injection`, `diff`, `doctor`, regex defaults
+- Tested: `discovery`, `config`, `config-writer`, `state`, `injection`, `diff`, `doctor`, `profiles`, `profile-overlay`, `name-input-overlay`, regex defaults
 - Still untested: `CapsSelector` overlay UI (528 lines — needs fake-terminal harness), `before_agent_start` orchestrator handler, file watcher. Cover these as opportunities arise; not gated on a version.
 
 Target 60% line coverage by end of v2.2 (overlay coverage is the gap).
