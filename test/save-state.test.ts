@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { saveState, loadState, type FileEntry, STATE_FILE } from "../extensions/index.js";
+import { saveState, loadState, STATE_FILE } from "../src/state.js";
+import type { FileEntry } from "../src/types.js";
 
 let cwd: string;
 
