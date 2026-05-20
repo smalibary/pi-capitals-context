@@ -32,6 +32,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     opens the `/caps` file picker for editing, then writes the new
     toggles back into the same profile on Enter. No discard path for
     edit by design — your in-session toggles are the source of truth.
+- **`/caps-settings` Settings Hub + Skip overlay (v2.2-F3)** — the
+  architectural pivot that retires the `/caps-advance` dispatcher.
+  - `/caps-settings` opens a hub overlay listing the project's
+    non-daily-driver actions. First row is "Skip list" (active);
+    "Prompt preview", "Diagnose / Doctor", and "Configuration" are
+    visible stubs that say "coming soon" with a hint about which
+    phase they land in (F4, F5).
+  - **Skip overlay**: top row `+ Add entry` chains a name-input
+    overlay; entry rows take `d` twice to remove; `R` twice resets
+    to defaults. Shows whether the current list is the built-in
+    defaults or a project override.
+  - Legacy `/caps-advance skip *` still works as a typed fallback.
 - `MAINTAINING.md` — single-file guide covering doc inventory, when to split
   into `docs/`, per-file update rules, screenshot conventions, diagram policy,
   doc-rot checklist. Linked from `ROADMAP.md` Release Procedure.
