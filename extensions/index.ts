@@ -449,7 +449,7 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 
 	const openNameInputOverlay = async (
 		ctx: any,
-		opts: { title: string; hint: string; existing: Set<string> },
+		opts: { title: string; hint: string; existing: Set<string>; initial?: string },
 	): Promise<string | null> => {
 		let saved: string | null = null;
 		await ctx.ui.custom((_tui: any, theme: Theme, _kb: any, done: () => void) => {
@@ -457,6 +457,7 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 				title: opts.title,
 				hint: opts.hint,
 				existing: opts.existing,
+				initial: opts.initial,
 				theme,
 			});
 			overlay.onSave = (name) => { saved = name; done(); };
@@ -487,8 +488,44 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 		ctx.ui.notify(`Saved profile "${name}" — ${on}/${Object.keys(toggles).length} files enabled.`, "info");
 	};
 
+	const runRenameProfileFlow = async (ctx: any, oldName: string): Promise<void> => {
+		const existing = new Set(Object.keys(loadProfiles(cwd)).filter(n => n !== oldName));
+		const newName = await openNameInputOverlay(ctx, {
+			title: `Rename profile "${oldName}"`,
+			hint: "Edit the name and press Enter. Esc to keep the current name.",
+			existing,
+			initial: oldName,
+		});
+		if (!newName || newName === oldName) {
+			ctx.ui.notify("Rename discarded.", "info");
+			return;
+		}
+		const { renamed, reason } = renameProfile(cwd, oldName, newName);
+		if (renamed) {
+			ctx.ui.notify(`Renamed "${oldName}" → "${newName}".`, "info");
+			return;
+		}
+		const msg = reason === "missing" ? `Profile "${oldName}" not found.`
+			: reason === "exists" ? `Profile "${newName}" already exists.`
+			: "Rename failed.";
+		ctx.ui.notify(msg, "warn");
+	};
+
+	const runEditProfileFlow = async (ctx: any, name: string): Promise<void> => {
+		const toggles = loadProfileToggles(cwd, name);
+		if (!toggles) { ctx.ui.notify(`Profile "${name}" not found.`, "warn"); return; }
+		applyProfileToggles(toggles);
+		await openFilePickerForProfile(ctx);
+		const updated = captureCurrentToggles();
+		saveProfile(cwd, name, updated);
+		const on = Object.values(updated).filter(Boolean).length;
+		ctx.ui.notify(`Updated profile "${name}" — ${on}/${Object.keys(updated).length} files enabled.`, "info");
+	};
+
 	const openProfileOverlay = async (ctx: any): Promise<void> => {
 		let pendingCreate = false;
+		let pendingRename: string | null = null;
+		let pendingEdit: string | null = null;
 		await ctx.ui.custom((_tui: any, theme: Theme, _kb: any, done: () => void) => {
 			const filesByPath = new Set<string>();
 			for (const f of rootFiles) filesByPath.add(f.relativePath);
@@ -497,6 +534,8 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 			selector.onAction = (a) => {
 				if (a.kind === "quit") { done(); return; }
 				if (a.kind === "create") { pendingCreate = true; done(); return; }
+				if (a.kind === "rename") { pendingRename = a.name; done(); return; }
+				if (a.kind === "edit") { pendingEdit = a.name; done(); return; }
 				if (a.kind === "load") {
 					const toggles = loadProfileToggles(cwd, a.name);
 					if (!toggles) { ctx.ui.notify(`Profile "${a.name}" not found.`, "warn"); done(); return; }
@@ -517,6 +556,8 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 			return selector;
 		}, { overlay: true });
 		if (pendingCreate) await runCreateProfileFlow(ctx);
+		else if (pendingRename) await runRenameProfileFlow(ctx, pendingRename);
+		else if (pendingEdit) await runEditProfileFlow(ctx, pendingEdit);
 	};
 
 	const handleCapsProfile = async (args: string, ctx: any): Promise<void> => {

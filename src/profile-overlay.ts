@@ -5,6 +5,8 @@ import { diffProfile, type ProfileStore, type ToggleMap } from "./profiles.js";
 export type ProfileAction =
 	| { kind: "load"; name: string }
 	| { kind: "delete"; name: string }
+	| { kind: "rename"; name: string }
+	| { kind: "edit"; name: string }
 	| { kind: "create" }
 	| { kind: "quit" };
 
@@ -95,6 +97,20 @@ export class ProfileSelector {
 			}
 			this.armedDelete = name;
 			this.invalidate();
+			return;
+		}
+		if (data === "r" || data === "R") {
+			const name = this.profileAt(this.cursor);
+			if (!name) return;
+			this.armedDelete = null;
+			this.onAction?.({ kind: "rename", name });
+			return;
+		}
+		if (data === "e" || data === "E") {
+			const name = this.profileAt(this.cursor);
+			if (!name) return;
+			this.armedDelete = null;
+			this.onAction?.({ kind: "edit", name });
 			return;
 		}
 		this.armedDelete = null;
@@ -190,7 +206,7 @@ export class ProfileSelector {
 		if (this.isCreateRow(this.cursor)) {
 			return "  " + k("↑↓") + d(" navigate · ") + k("⏎") + d(" create new · ") + k("esc") + d(" quit");
 		}
-		return "  " + k("↑↓") + d(" navigate · ") + k("⏎") + d(" load · ") + k("d") + d(" delete · ") + k("esc") + d(" quit");
+		return "  " + k("↑↓") + d(" navigate · ") + k("⏎") + d(" load · ") + k("e") + d(" edit · ") + k("r") + d(" rename · ") + k("d") + d(" delete · ") + k("esc") + d(" quit");
 	}
 
 	render(width: number): string[] {

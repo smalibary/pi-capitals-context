@@ -22,7 +22,7 @@ Out of scope for this rule: trivial one-shot text commands like `/caps-doctor --
 # Commands (current surface as of v2.2-dev)
 
 - `/caps` — toggle overlay (daily driver)
-- `/caps-profile` — overlay picker for profiles. Top row `+ Create new profile` chains /caps + name-input overlays (Enter save, Esc discard restores toggles). Profile rows: Enter load, d-twice delete, Esc quit. Typed: `save <name>`, `load <name> [--dry-run]`, `rename <old> <new>`, `list`.
+- `/caps-profile` — overlay picker for profiles. Top row `+ Create new profile` chains /caps + name-input overlays (Enter save, Esc discard restores toggles). Profile rows: Enter load, `e` edit (loads + /caps + saves back), `r` rename (opens name-input pre-filled), `d` twice delete, Esc quit. Typed: `save <name>`, `load <name> [--dry-run]`, `rename <old> <new>`, `list`.
 - `/caps-advance skip <list|add|remove|reset>` — skip list editor (planned to move to /caps-skip with its own overlay; `/caps-advance` umbrella retires after that)
 - `/caps-advance profile <list|save|load|delete|rename>` — legacy alias for `/caps-profile`; same handler, transitional surface
 - `/caps-prompt [--copy] [--diff]` — show exact injected text + per-file stats
@@ -60,7 +60,7 @@ Rules:
 - Run `npm test` before declaring task done. Not optional.
 
 Current state (v2.2-dev):
-- 163 tests across 13 files; coverage ~30% lines, ~88% branches on covered code
+- 169 tests across 13 files; coverage ~30% lines, ~88% branches on covered code
 - All v2.0 audit tripwires flipped — loose-match fix, LICENSE/CHANGELOG/README in default skip list
 - Tested: `discovery`, `config`, `config-writer`, `state`, `injection`, `diff`, `doctor`, `profiles`, `profile-overlay`, `name-input-overlay`, regex defaults
 - Still untested: `CapsSelector` overlay UI (528 lines — needs fake-terminal harness), `before_agent_start` orchestrator handler, file watcher. Cover these as opportunities arise; not gated on a version.
