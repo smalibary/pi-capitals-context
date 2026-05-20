@@ -40,6 +40,8 @@ import { ProfileSelector } from "../src/profile-overlay.js";
 import { NameInputOverlay } from "../src/name-input-overlay.js";
 import { SettingsHubOverlay, type SettingsRow } from "../src/settings-overlay.js";
 import { SkipOverlay } from "../src/skip-overlay.js";
+import { PromptPreviewOverlay } from "../src/prompt-overlay.js";
+import { DoctorOverlay } from "../src/doctor-overlay.js";
 import { loadConfig, defaultConfig, type CapsConfig } from "../src/config.js";
 import { addSkipFile, removeSkipFile, resetSkipFiles, listSkipFiles } from "../src/config-writer.js";
 import {
@@ -639,6 +641,56 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 		}
 	};
 
+	const openPromptPreviewFlow = async (ctx: any): Promise<void> => {
+		await ctx.ui.custom((_tui: any, theme: Theme, _kb: any, done: () => void) => {
+			const enabled = [
+				...rootFiles.filter(f => f.enabled),
+				...subdirFiles.filter(f => f.enabled),
+				...globalFiles.filter(f => f.enabled),
+			];
+			const overlay = new PromptPreviewOverlay(enabled, lastInjection, theme);
+			overlay.onAction = async (a) => {
+				if (a.kind === "quit") { done(); return; }
+				if (a.kind === "copy") {
+					const r = await copyToClipboard(a.text);
+					ctx.ui.notify(
+						r.ok ? "Copied injection text to clipboard." : `Clipboard failed: ${r.reason}`,
+						r.ok ? "info" : "warn",
+					);
+				}
+			};
+			return overlay;
+		}, { overlay: true });
+	};
+
+	const openDoctorFlow = async (ctx: any): Promise<void> => {
+		const projectConfigPath = path.join(cwd, ".pi", PROJECT_CONFIG_NAME);
+		const stateFilePath = path.join(cwd, ".pi", STATE_FILE);
+		const inspection = await inspectDirectory(cwd, config);
+		const inputs: import("../src/doctor.js").DoctorInputs = {
+			cwd,
+			globalCapsDir: path.join(os.homedir(), ".pi", "CAPS"),
+			stateFilePath,
+			stateFileExists: fs.existsSync(stateFilePath),
+			projectConfigPath,
+			projectConfigExists: fs.existsSync(projectConfigPath),
+			globalConfigPath: GLOBAL_CONFIG_PATH,
+			globalConfigExists: fs.existsSync(GLOBAL_CONFIG_PATH),
+			rootFiles,
+			subdirFiles,
+			globalFiles,
+			watcherCount: watchers.length,
+			lastInjection,
+			inspection,
+			verbose: false,
+		};
+		await ctx.ui.custom((_tui: any, theme: Theme, _kb: any, done: () => void) => {
+			const overlay = new DoctorOverlay(inputs, theme);
+			overlay.onAction = (a) => { if (a.kind === "quit") done(); };
+			return overlay;
+		}, { overlay: true });
+	};
+
 	const openSettingsHub = async (ctx: any): Promise<void> => {
 		let exit = false;
 		while (!exit) {
@@ -654,21 +706,17 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 					id: "prompt",
 					label: "Prompt preview",
 					badge: `${enabledCount} files enabled`,
-					stub: true,
-					stubHint: "Lands in v2.2-F4 — will replace /caps-prompt with an overlay.",
 				},
 				{
 					id: "doctor",
 					label: "Diagnose / Doctor",
-					stub: true,
-					stubHint: "Lands in v2.2-F5 — will replace /caps-doctor with an overlay.",
 				},
 				{
 					id: "config",
 					label: "Configuration",
 					badge: ".pi/caps-config.json",
 					stub: true,
-					stubHint: "Edit the config file directly for now; overlay arrives later in v2.2.",
+					stubHint: "Edit the config file directly for now; overlay arrives later in v2.x.",
 				},
 			];
 
@@ -684,6 +732,8 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 
 			if (!opened) { exit = true; break; }
 			if (opened === "skip") await runSkipListFlow(ctx);
+			else if (opened === "prompt") await openPromptPreviewFlow(ctx);
+			else if (opened === "doctor") await openDoctorFlow(ctx);
 		}
 	};
 
