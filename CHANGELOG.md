@@ -23,6 +23,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **Legacy `/caps-advance profile *`** — same dispatcher path still works
   during the transition; will be removed once `/caps-skip` ships and the
   `/caps-advance` umbrella is retired.
+- **Profile rename + edit (v2.2-F2)** — completes the `/caps-profile`
+  overlay CRUD surface:
+  - `r` on a profile row → opens a name-input overlay pre-filled with
+    the current name. Enter saves the rename; Esc keeps the current
+    name. Validation rejects collisions with other profile names.
+  - `e` on a profile row → loads the profile into the current session,
+    opens the `/caps` file picker for editing, then writes the new
+    toggles back into the same profile on Enter. No discard path for
+    edit by design — your in-session toggles are the source of truth.
 - `MAINTAINING.md` — single-file guide covering doc inventory, when to split
   into `docs/`, per-file update rules, screenshot conventions, diagram policy,
   doc-rot checklist. Linked from `ROADMAP.md` Release Procedure.

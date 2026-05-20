@@ -77,6 +77,63 @@ describe("ProfileSelector navigation", () => {
 	});
 });
 
+describe("ProfileSelector rename + edit", () => {
+	it("r on profile row emits rename action", () => {
+		const sel = makeSelector();
+		const actions: ProfileAction[] = [];
+		sel.onAction = (a) => actions.push(a);
+		sel.handleInput("\x1b[B");
+		sel.handleInput("r");
+		expect(actions).toEqual([{ kind: "rename", name: "api-work" }]);
+	});
+
+	it("R (uppercase) also triggers rename", () => {
+		const sel = makeSelector();
+		const actions: ProfileAction[] = [];
+		sel.onAction = (a) => actions.push(a);
+		sel.handleInput("\x1b[B");
+		sel.handleInput("R");
+		expect(actions).toEqual([{ kind: "rename", name: "api-work" }]);
+	});
+
+	it("r on Create row does nothing", () => {
+		const sel = makeSelector();
+		const actions: ProfileAction[] = [];
+		sel.onAction = (a) => actions.push(a);
+		sel.handleInput("r");
+		expect(actions).toEqual([]);
+	});
+
+	it("e on profile row emits edit action", () => {
+		const sel = makeSelector();
+		const actions: ProfileAction[] = [];
+		sel.onAction = (a) => actions.push(a);
+		sel.handleInput("\x1b[B");
+		sel.handleInput("\x1b[B");
+		sel.handleInput("e");
+		expect(actions).toEqual([{ kind: "edit", name: "frontend" }]);
+	});
+
+	it("e on Create row does nothing", () => {
+		const sel = makeSelector();
+		const actions: ProfileAction[] = [];
+		sel.onAction = (a) => actions.push(a);
+		sel.handleInput("e");
+		expect(actions).toEqual([]);
+	});
+
+	it("r cancels an armed delete", () => {
+		const sel = makeSelector();
+		const actions: ProfileAction[] = [];
+		sel.onAction = (a) => actions.push(a);
+		sel.handleInput("\x1b[B");
+		sel.handleInput("d");
+		sel.handleInput("r");
+		sel.handleInput("d");
+		expect(actions).toEqual([{ kind: "rename", name: "api-work" }]);
+	});
+});
+
 describe("ProfileSelector delete arming", () => {
 	it("d on Create row does nothing", () => {
 		const sel = makeSelector();
