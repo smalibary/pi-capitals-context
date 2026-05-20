@@ -44,6 +44,22 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     to defaults. Shows whether the current list is the built-in
     defaults or a project override.
   - Legacy `/caps-advance skip *` still works as a typed fallback.
+- **Prompt-preview overlay (v2.2-F4)** + **Doctor overlay (v2.2-F5)**
+  — both Settings Hub rows are now active, both reuse the existing
+  `buildPromptPreview` / `buildDoctorReport` helpers as content:
+  - **Prompt preview**: scrollable view of the assembled injection.
+    `↑↓` line scroll, `PgUp/PgDn` page scroll, `g`/`G` top/bottom,
+    `c` copies the injection to clipboard, `p` toggles diff-vs-
+    previous-turn (only when a previous turn exists).
+  - **Doctor**: scrollable diagnostic report. Same scroll keys;
+    `v` toggles verbose mode in-place (no separate command).
+- **Legacy command status** — per the UI-First Rule in `CLAUDE.md`,
+  typed slash commands are kept as scripting fallbacks once an
+  overlay exists for their function. `/caps-prompt [--copy] [--diff]`,
+  `/caps-doctor [--verbose]`, and `/caps-advance skip|profile *` all
+  still work and route through the same handlers. The overlay path
+  via `/caps-settings` is the primary discovery surface; the typed
+  commands are documented as secondary.
 - `MAINTAINING.md` — single-file guide covering doc inventory, when to split
   into `docs/`, per-file update rules, screenshot conventions, diagram policy,
   doc-rot checklist. Linked from `ROADMAP.md` Release Procedure.

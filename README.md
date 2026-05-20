@@ -173,10 +173,10 @@ To bind a custom shortcut to `/caps`, add to `~/.pi/agent/keybindings.json`:
 |---|---|
 | `/caps` | Toggle overlay — root, subdir, and global CAPS files. Daily driver. |
 | `/caps-profile` | Overlay picker for saved toggle profiles. Top row is `+ Create new profile` — picking it chains into the `/caps` file picker, then a name-input overlay (Enter saves, Esc discards & restores toggles). Existing profile rows: Enter loads, `e` edits (loads → `/caps` → saves back), `r` renames (name-input pre-filled), `d` twice deletes, Esc quits. Project-scoped; Global CAPS toggles untouched. |
-| `/caps-settings` | Settings Hub overlay — rows for Skip list (active), Prompt preview (stub, v2.2-F4), Diagnose / Doctor (stub, v2.2-F5), Configuration (stub). Enter opens a row, Esc quits. |
-| `/caps-advance skip <list\|add\|remove\|reset>` | Legacy typed surface for skip list — retires once the overlay path stabilises. Use `/caps-settings → Skip list` instead. |
-| `/caps-prompt` | Print the exact text that gets injected into the system prompt. `--copy` pipes to clipboard, `--diff` shows line-diff vs previous turn. Trust check. |
-| `/caps-doctor` | Diagnose discovery, state file, watchers, last injection, config sources. `--verbose` shows every entry in cwd with classification. |
+| `/caps-settings` | Settings Hub overlay — rows for Skip list, Prompt preview, Diagnose / Doctor (all active); Configuration (stub). Enter opens a row, Esc quits. The primary entry point for non-daily-driver actions. |
+| `/caps-advance skip <list\|add\|remove\|reset>` | Typed scripting fallback for skip list. Overlay path: `/caps-settings → Skip list`. |
+| `/caps-prompt` | Typed scripting fallback for prompt preview. `--copy` pipes to clipboard, `--diff` shows line-diff vs previous turn. Overlay path: `/caps-settings → Prompt preview` (with `c` copy / `p` diff keys). |
+| `/caps-doctor` | Typed scripting fallback for diagnostics. `--verbose` shows every entry in cwd with classification. Overlay path: `/caps-settings → Diagnose / Doctor` (with `v` verbose key). |
 
 ### Profiles (typed shortcuts)
 
