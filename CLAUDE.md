@@ -23,10 +23,11 @@ Out of scope for this rule: trivial one-shot text commands like `/caps-doctor --
 
 - `/caps` — toggle overlay (daily driver)
 - `/caps-profile` — overlay picker for profiles. Top row `+ Create new profile` chains /caps + name-input overlays (Enter save, Esc discard restores toggles). Profile rows: Enter load, `e` edit (loads + /caps + saves back), `r` rename (opens name-input pre-filled), `d` twice delete, Esc quit. Typed: `save <name>`, `load <name> [--dry-run]`, `rename <old> <new>`, `list`.
-- `/caps-advance skip <list|add|remove|reset>` — skip list editor (planned to move to /caps-skip with its own overlay; `/caps-advance` umbrella retires after that)
+- `/caps-settings` — Settings Hub overlay. Rows: Skip list (active), Prompt preview (stub, lands v2.2-F4), Diagnose / Doctor (stub, lands v2.2-F5), Configuration (stub). Enter opens active row's overlay; Esc quits.
+- `/caps-advance skip <list|add|remove|reset>` — legacy typed surface for skip list (retires after Phase 2 stabilises; the overlay is now in /caps-settings → Skip list)
 - `/caps-advance profile <list|save|load|delete|rename>` — legacy alias for `/caps-profile`; same handler, transitional surface
-- `/caps-prompt [--copy] [--diff]` — show exact injected text + per-file stats
-- `/caps-doctor [--verbose]` — diagnose discovery, state, watchers, config sources
+- `/caps-prompt [--copy] [--diff]` — show exact injected text + per-file stats (retires in v2.2-F4)
+- `/caps-doctor [--verbose]` — diagnose discovery, state, watchers, config sources (retires in v2.2-F5)
 
 # Local vs npm
 
@@ -60,9 +61,9 @@ Rules:
 - Run `npm test` before declaring task done. Not optional.
 
 Current state (v2.2-dev):
-- 169 tests across 13 files; coverage ~30% lines, ~88% branches on covered code
+- 193 tests across 15 files; coverage ~30% lines, ~88% branches on covered code
 - All v2.0 audit tripwires flipped — loose-match fix, LICENSE/CHANGELOG/README in default skip list
-- Tested: `discovery`, `config`, `config-writer`, `state`, `injection`, `diff`, `doctor`, `profiles`, `profile-overlay`, `name-input-overlay`, regex defaults
+- Tested: `discovery`, `config`, `config-writer`, `state`, `injection`, `diff`, `doctor`, `profiles`, `profile-overlay`, `name-input-overlay`, `settings-overlay`, `skip-overlay`, regex defaults
 - Still untested: `CapsSelector` overlay UI (528 lines — needs fake-terminal harness), `before_agent_start` orchestrator handler, file watcher. Cover these as opportunities arise; not gated on a version.
 
 Target 60% line coverage by end of v2.2 (overlay coverage is the gap).

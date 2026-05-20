@@ -38,6 +38,8 @@ import { buildDisplayText, formatSystemPromptExtra, buildPromptPreview } from ".
 import { CapsSelector } from "../src/overlay.js";
 import { ProfileSelector } from "../src/profile-overlay.js";
 import { NameInputOverlay } from "../src/name-input-overlay.js";
+import { SettingsHubOverlay, type SettingsRow } from "../src/settings-overlay.js";
+import { SkipOverlay } from "../src/skip-overlay.js";
 import { loadConfig, defaultConfig, type CapsConfig } from "../src/config.js";
 import { addSkipFile, removeSkipFile, resetSkipFiles, listSkipFiles } from "../src/config-writer.js";
 import {
@@ -585,6 +587,109 @@ export default function capitalsContextExtension(pi: ExtensionAPI) {
 	pi.registerCommand("caps-profile", {
 		description: "Named toggle snapshots — overlay picker + typed save/rename",
 		handler: async (args, ctx) => { await handleCapsProfile(args, ctx); },
+	});
+
+	const runSkipListFlow = async (ctx: any): Promise<void> => {
+		let exit = false;
+		while (!exit) {
+			let action: "add" | "quit" = "quit";
+			await ctx.ui.custom((_tui: any, theme: Theme, _kb: any, done: () => void) => {
+				const { list, source } = listSkipFiles(cwd);
+				const overlay = new SkipOverlay(list, source, theme);
+				overlay.onAction = (a) => {
+					if (a.kind === "quit") { action = "quit"; done(); return; }
+					if (a.kind === "add") { action = "add"; done(); return; }
+					if (a.kind === "delete") {
+						const r = removeSkipFile(cwd, a.name);
+						const fresh = listSkipFiles(cwd);
+						overlay.refresh(fresh.list, fresh.source);
+						ctx.ui.notify(
+							r.removed ? `Removed "${a.name}" from skip list. Restart pi to apply.` : `"${a.name}" not found.`,
+							r.removed ? "info" : "warn",
+						);
+						return;
+					}
+					if (a.kind === "reset") {
+						resetSkipFiles(cwd);
+						const fresh = listSkipFiles(cwd);
+						overlay.refresh(fresh.list, fresh.source);
+						ctx.ui.notify("Skip list reset to defaults. Restart pi to apply.", "info");
+					}
+				};
+				return overlay;
+			}, { overlay: true });
+
+			if (action === "quit") { exit = true; break; }
+
+			if (action === "add") {
+				const existing = new Set(listSkipFiles(cwd).list);
+				const name = await openNameInputOverlay(ctx, {
+					title: "Add to skip list",
+					hint: "Type a filename (e.g. NOTES.md). Esc to cancel.",
+					existing,
+				});
+				if (name) {
+					const r = addSkipFile(cwd, name);
+					ctx.ui.notify(
+						r.added ? `Added "${name}" to skip list. Restart pi to apply.` : `"${name}" already in list.`,
+						r.added ? "info" : "warn",
+					);
+				}
+			}
+		}
+	};
+
+	const openSettingsHub = async (ctx: any): Promise<void> => {
+		let exit = false;
+		while (!exit) {
+			const { list } = listSkipFiles(cwd);
+			const enabledCount =
+				rootFiles.filter(f => f.enabled).length +
+				subdirFiles.filter(f => f.enabled).length +
+				globalFiles.filter(f => f.enabled).length;
+
+			const rows: SettingsRow[] = [
+				{ id: "skip", label: "Skip list", badge: `${list.length} entries` },
+				{
+					id: "prompt",
+					label: "Prompt preview",
+					badge: `${enabledCount} files enabled`,
+					stub: true,
+					stubHint: "Lands in v2.2-F4 — will replace /caps-prompt with an overlay.",
+				},
+				{
+					id: "doctor",
+					label: "Diagnose / Doctor",
+					stub: true,
+					stubHint: "Lands in v2.2-F5 — will replace /caps-doctor with an overlay.",
+				},
+				{
+					id: "config",
+					label: "Configuration",
+					badge: ".pi/caps-config.json",
+					stub: true,
+					stubHint: "Edit the config file directly for now; overlay arrives later in v2.2.",
+				},
+			];
+
+			let opened: string | null = null;
+			await ctx.ui.custom((_tui: any, theme: Theme, _kb: any, done: () => void) => {
+				const hub = new SettingsHubOverlay(rows, theme);
+				hub.onAction = (a) => {
+					if (a.kind === "quit") { opened = null; done(); return; }
+					if (a.kind === "open") { opened = a.id; done(); return; }
+				};
+				return hub;
+			}, { overlay: true });
+
+			if (!opened) { exit = true; break; }
+			if (opened === "skip") await runSkipListFlow(ctx);
+		}
+	};
+
+	pi.registerCommand("caps-settings", {
+		description: "Settings hub — skip list, prompt preview, diagnose, config",
+		handler: async (_args, ctx) => { await openSettingsHub(ctx); },
 	});
 
 	pi.on("before_agent_start", async (event, ctx) => {
