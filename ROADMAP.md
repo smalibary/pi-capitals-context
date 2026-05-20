@@ -12,12 +12,12 @@
 | Version | Status | Highlights |
 |---|---|---|
 | **v2.1.0** | ✅ Shipped — 2026-05-20 | tests + CI gate, modular `src/`, all audit bugs fixed, `/caps-advance skip`, `/caps-prompt`, `/caps-doctor`, configurable discovery, defensive limits |
-| **v2.2** | in progress | **UI-first redesign**: every action becomes an **Overlay**. Profiles full CRUD, `/caps-settings` hub, retire `/caps-advance` / `/caps-prompt` / `/caps-doctor` standalone commands |
-| **v2.3** | planned | rest of `/caps-advance` features as overlays — token budget, tags, conditions, per-CAPS injection format |
+| **v2.2.0** | ✅ Shipped — 2026-05-20 | **UI-first redesign**: `/caps-profile` overlay (full CRUD + create/edit/rename flows), `/caps-settings` hub (skip list, prompt preview, diagnose), `Overlay`/`Settings Hub` doctrine in `CONTEXT.md`. Legacy `/caps-prompt`/`/caps-doctor`/`/caps-advance` kept as typed scripting fallbacks per the new UI-First Rule. |
+| **v2.3** | planned | overlay-based budget + tags + conditions + per-CAPS injection format; state persistence completeness; watcher hot-reload; fuzzy nav (carry-over from earlier v2.2 plan) |
 | **v2.4** | planned | cache & cost — freeze mode, accurate tokens, folder index injection, cache-bust warnings |
 | **v3.0** | planned | platform — `/caps-init`, includes/imports, public API, content search, ephemeral CAPS, auto-context |
 
-See `CHANGELOG.md` for the v2.1.0 release notes.
+See `CHANGELOG.md` for v2.1.0 and v2.2.0 release notes.
 
 ---
 
@@ -221,7 +221,7 @@ Goal: SKIP list is user's choice, not hardcoded. Same for CAPS naming regex.
 
 ---
 
-# v2.2 — UI-First Redesign
+# v2.2 — UI-First Redesign ✅ SHIPPED 2026-05-20
 
 Goal: every action this project ships is an **Overlay**. Subcommand dispatchers and flag-based CLIs retire. The slash-command surface shrinks to three primary entry points:
 
@@ -632,10 +632,10 @@ Things explicitly NOT on the roadmap, with reasons:
 
 # Three Bets For Next Sprint
 
-For v2.2 (UI-first redesign), the three highest-impact bets in order:
+v2.2 shipped all six planned features (F1 profile overlay + create flow, F2 profile rename+edit, F3 settings hub + skip overlay, F4 prompt overlay, F5 doctor overlay, F6 legacy commands retained as scripting fallbacks). For v2.3, three highest-impact bets in order:
 
-1. **`/caps-profile` overlay + create flow** (v2.2-F1) — ✅ shipped this cycle. Brought v2.3-F1 forward and reshaped it as an **Overlay**-first feature, which became the seed of the v2.2 design philosophy.
-2. **`/caps-settings` hub + skip overlay** (v2.2-F3) — the architectural pivot. Once the hub exists, retiring `/caps-advance`/`/caps-prompt`/`/caps-doctor` becomes mechanical work.
-3. **Profile full CRUD** (v2.2-F2) — rename + edit close the loop on the **Profile** **Overlay**. Small lift, big UX win for users who want to iterate on saved profiles.
+1. **Token budget overlay** (v2.3-F2 brought forward) — a `/caps-settings → Token budget` row that sets a per-project ceiling and refuses toggles that would exceed it, with a "rank by frontmatter priority and fill greedy" auto mode. The highest-leverage cost-control feature remaining; needs accurate token counts (currently heuristic — acceptable for v2.3).
+2. **State persistence completeness** (carry-over from earlier v2.2 plan) — sort mode, expanded folders, cursor position, filter draft all survive `/caps` close-reopen. Many small persistence holes; fix together. Foundation for future overlay state preservation.
+3. **Hot reload on edit** (carry-over) — file watcher already fires; current UX is "restart pi". Press `r` in `/caps` overlay to reload changed CAPS files. Distinct `added`/`modified`/`deleted` watcher messages. Replaces the "restart to reload" friction.
 
-Defer to v2.3+: budgets, tags, conditions, freeze mode, includes, auto-context. Deferred from the earlier v2.2 plan (not lost): state persistence completeness, watcher upgrades, overlay clarity polish, fuzzy nav. Those return to the roadmap once the UI-first foundation is in place.
+Defer to v2.4+: freeze mode, accurate tokens (tiktoken), folder index injection, cache-bust warnings, includes/imports, auto-context.
