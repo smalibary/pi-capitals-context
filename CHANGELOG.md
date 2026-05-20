@@ -4,7 +4,11 @@ All notable changes to `pi-capitals-context`.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.2.0] — 2026-05-20
+
+UI-first redesign. Every user action now ships as an **Overlay** first;
+typed slash-command arguments are a scripting fallback. Three primary
+slash commands cover everything: `/caps`, `/caps-profile`, `/caps-settings`.
 
 ### Added
 - **`/caps-profile`** — named snapshots of project toggles, overlay-first UX:
@@ -53,22 +57,39 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     previous-turn (only when a previous turn exists).
   - **Doctor**: scrollable diagnostic report. Same scroll keys;
     `v` toggles verbose mode in-place (no separate command).
-- **Legacy command status** — per the UI-First Rule in `CLAUDE.md`,
-  typed slash commands are kept as scripting fallbacks once an
-  overlay exists for their function. `/caps-prompt [--copy] [--diff]`,
-  `/caps-doctor [--verbose]`, and `/caps-advance skip|profile *` all
-  still work and route through the same handlers. The overlay path
-  via `/caps-settings` is the primary discovery surface; the typed
-  commands are documented as secondary.
 - `MAINTAINING.md` — single-file guide covering doc inventory, when to split
-  into `docs/`, per-file update rules, screenshot conventions, diagram policy,
-  doc-rot checklist. Linked from `ROADMAP.md` Release Procedure.
+  into `docs/`, per-file update rules, screenshot conventions (including the
+  new overlay screenshot rule), diagram policy, doc-rot checklist. Linked
+  from `ROADMAP.md` Release Procedure.
 
 ### Changed
+- **Command surface re-shaped to three primary entry points:** `/caps`
+  (file toggling, unchanged), `/caps-profile` (full **Profile** CRUD via
+  overlay), `/caps-settings` (everything else). Per the UI-First Rule
+  documented in `CLAUDE.md`, typed slash commands are kept as scripting
+  fallbacks once an overlay exists for their function — so
+  `/caps-prompt [--copy] [--diff]`, `/caps-doctor [--verbose]`, and
+  `/caps-advance skip|profile *` all still work and route through the
+  same handlers, but `/caps-settings` is now the primary discovery path.
 - Default `skipFiles` now also includes `MAINTAINING.md` and `ROADMAP.md`
   (planning/maintenance docs, like LICENSE/CHANGELOG, should not auto-inject
-  into CAPS context). Override via `/caps-advance skip remove <name>` if you
-  want either as context.
+  into CAPS context). Override via the Skip overlay (`/caps-settings →
+  Skip list`) or the typed `/caps-advance skip remove <name>` fallback.
+
+### Internal
+- **UI-First Rule** documented in `CLAUDE.md` — defines when new actions
+  should ship as overlays vs typed commands; `Overlay` and `Settings Hub`
+  added as canonical terms in `CONTEXT.md` with a `## Design philosophy`
+  section that supersedes the earlier dispatcher-style design.
+- **ROADMAP** v2.2 section re-scoped around the UI-first plan (F1–F6).
+  Items deferred from the earlier v2.2 plan (state persistence completeness,
+  watcher upgrades, fuzzy nav, editor integration) noted as carry-overs.
+- **Test suite grew from 99 → 213** across 17 files. New tested modules:
+  `profiles`, `profile-overlay`, `name-input-overlay`, `settings-overlay`,
+  `skip-overlay`, `prompt-overlay`, `doctor-overlay`. Coverage remains
+  ~30% lines / ~88% branches on covered code; the gap is still the
+  pre-existing `CapsSelector` overlay UI which needs a fake-terminal
+  harness.
 
 ## [2.1.0] — 2026-05-20
 
